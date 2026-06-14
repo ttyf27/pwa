@@ -123,13 +123,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-se
 </div>
 
 <div class="day-headers">
-  <div class="day-header sun">日</div>
   <div class="day-header weekday">月</div>
   <div class="day-header weekday">火</div>
   <div class="day-header weekday">水</div>
   <div class="day-header weekday">木</div>
   <div class="day-header weekday">金</div>
   <div class="day-header sat">土</div>
+  <div class="day-header sun">日</div>
 </div>
 
 <div class="grid" id="mainGrid"></div>
@@ -383,7 +383,7 @@ function render() {
   const firstDay = new Date(y, m-1, 1);
   const lastDay = new Date(y, m, 0);
   const daysInMonth = lastDay.getDate();
-  const startDow = firstDay.getDay();
+  const startDow = (firstDay.getDay() + 6) % 7; // 月曜始まり
   const todayStr = ymd(new Date());
 
   for (let i = 0; i < startDow; i++) grid.appendChild(document.createElement('div'));
