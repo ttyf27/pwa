@@ -412,8 +412,10 @@ function render() {
 
 function dayTotalCups(entry) {
   if (!entry || entry.status !== 'drank') return entry?.status === 'no_drink' ? 0 : null;
+  const drinks = entry.drinks || {};
+  if (Object.keys(drinks).length === 0) return null; // 合計gのみの取り込み日は杯が不明
   let total = 0;
-  for (const [pid, count] of Object.entries(entry.drinks || {})) {
+  for (const [pid, count] of Object.entries(drinks)) {
     if (count > 0) total += count;
   }
   return total;
@@ -435,7 +437,7 @@ function monthlyTotalsFor(y, m) {
 // 今日を基点に過去N日の移動平均 (記録ある日のみ集計、休肝日(0g)も含む)
 function rollingAverage(days) {
   const today = new Date();
-  let sumG = 0, sumCups = 0, n = 0;
+  let sumG = 0, sumCups = 0, n = 0, nCups = 0;
   for (let i = 0; i < days; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
@@ -445,10 +447,10 @@ function rollingAverage(days) {
     const c = dayTotalCups(entry);
     if (g == null) continue;
     sumG += g;
-    sumCups += c || 0;
+    if (c != null) { sumCups += c; nCups++; } // 杯は内訳が分かる日だけで平均(g記録のみの取り込み日は除外)
     n++;
   }
-  return { sumG, sumCups, n, avgG: n ? sumG/n : 0, avgCups: n ? sumCups/n : 0 };
+  return { sumG, sumCups, n, nCups, avgG: n ? sumG/n : 0, avgCups: nCups ? sumCups/nCups : 0 };
 }
 
 // 過去7日間の純アル/日 ミニ棒グラフ
@@ -591,8 +593,8 @@ function renderMA30() {
       <div class="value" style="color:${ma30_clr}">${ma30_monthlyG}g</div>
     </div>
     <div class="summary-row"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (g/日)</span><span class="count" style="color:${ma30_clr}">${ma30_avgG}g</span></div>
-    <div class="summary-row"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (杯/日)</span><span class="count">${ma30_avgCups}杯</span></div>
-    <div class="summary-row" style="font-size:11px; color:#999; padding-top:0;"><span class="emoji" style="visibility:hidden">.</span><span class="label-text">記録日数: ${ma30.n}/30日</span><span class="count" style="font-weight:normal; color:#999;"></span></div>
+    <div class="summary-row"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (杯/日)<span style="font-size:10px;color:#999;"> ※内訳記録日のみ</span></span><span class="count">${ma30_avgCups}杯</span></div>
+    <div class="summary-row" style="font-size:11px; color:#999; padding-top:0;"><span class="emoji" style="visibility:hidden">.</span><span class="label-text">記録日数: ${ma30.n}/30日 (杯内訳 ${ma30.nCups}日)</span><span class="count" style="font-weight:normal; color:#999;"></span></div>
   `;
 }
 
