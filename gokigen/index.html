@@ -118,13 +118,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-se
 <script>
 // Emoji set with colors and score (existing parse_gokigen.py に準拠 + UI追加色)
 const EMOJIS = [
-  { e: '^o^',  color: '#E91E63', score: 5, label: '絶好調' },
+  { e: '^o^',  color: '#E53935', score: 5, label: '絶好調' },
   { e: '~.~',  color: '#FFD54F', score: 3, label: 'ダルい' },
-  { e: 'T-T',  color: '#2196F3', score: 0, label: 'もう無理' },
-  { e: '^_^',  color: '#F8BBD0', score: 4, label: 'まあまあ' },
-  { e: 'ز_ز',  color: '#4FC3F7', score: 1, label: '憂鬱' },
-  { e: '*_*',  color: '#AD1457', score: 2, label: '気持ち悪い' },
-  { e: '>_<',  color: '#FF9800', score: 2, label: 'ツラい' },
+  { e: 'T-T',  color: '#1565C0', score: 0, label: 'もう無理' },
+  { e: '^_^',  color: '#F48FB1', score: 4, label: 'まあまあ' },
+  { e: 'ز_ز',  color: '#1E88E5', score: 1, label: '憂鬱' },
+  { e: '*_*',  color: '#29B6F6', score: 2, label: '気持ち悪い' },
+  { e: '>_<',  color: '#4DD0E1', score: 2, label: 'ツラい' },
 ];
 
 let currentDate = new Date();
@@ -155,7 +155,7 @@ function getEmojiInfo(e) {
 }
 
 function isLightEmoji(e) {
-  return e === '^_^' || e === '~.~';
+  return e === '^_^' || e === '~.~' || e === '>_<';
 }
 
 function render() {
