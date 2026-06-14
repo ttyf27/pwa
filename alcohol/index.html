@@ -134,6 +134,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-se
 
 <div class="grid" id="mainGrid"></div>
 
+<div class="summary" id="ma30Section"></div>
+
 <div class="week-chart" id="weekChart"></div>
 
 <div class="summary" id="summary"></div>
@@ -401,6 +403,7 @@ function render() {
     cell.onclick = () => openModal(dateStr);
     grid.appendChild(cell);
   }
+  renderMA30();
   renderWeekChart();
   renderSummary();
 }
@@ -551,13 +554,6 @@ function renderSummary() {
   const ma3G = histG.length > 0 ? Math.round((histG.reduce((a,b)=>a+b,0)/histG.length)*10)/10 : 0;
   const ma3Months = histCups.length;
 
-  // 今日基点の30日移動平均 (休肝日を入れると毎日減るモチベ指標)
-  const ma30 = rollingAverage(30);
-  const ma30_avgG = Math.round(ma30.avgG * 10) / 10;
-  const ma30_avgCups = Math.round(ma30.avgCups * 10) / 10;
-  const ma30_monthlyG = Math.round(ma30.avgG * 30);
-  const ma30_clr = ma30_monthlyG > MONTHLY_TARGET_G ? '#FF6B6B' : '#4CAF50';
-
   document.getElementById('summary').innerHTML = `
     <div class="summary-row main">
       <div>
@@ -574,9 +570,26 @@ function renderSummary() {
     <div class="summary-row" style="border-top:1px solid #f0f0f0; padding-top:8px; margin-top:4px;"><span class="emoji">🍶</span><span class="label-text">今月の総杯数</span><span class="count">${totalCups}杯</span></div>
     ${ma3Months >= 2 ? `<div class="summary-row"><span class="emoji">📊</span><span class="label-text">直近${ma3Months}ヶ月 月平均 (杯)</span><span class="count">${ma3Cups}杯</span></div>
     <div class="summary-row"><span class="emoji">📊</span><span class="label-text">直近${ma3Months}ヶ月 月平均 (g)</span><span class="count">${ma3G}g</span></div>` : ''}
-    <div class="summary-row" style="border-top:1px solid #f0f0f0; padding-top:8px; margin-top:4px;"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (g/日)</span><span class="count" style="color:${ma30_clr}">${ma30_avgG}g</span></div>
+  `;
+}
+
+// 30日移動平均セクション (直近7日の上に独立表示、月換算を先頭に)
+function renderMA30() {
+  const ma30 = rollingAverage(30);
+  const ma30_avgG = Math.round(ma30.avgG * 10) / 10;
+  const ma30_avgCups = Math.round(ma30.avgCups * 10) / 10;
+  const ma30_monthlyG = Math.round(ma30.avgG * 30);
+  const ma30_clr = ma30_monthlyG > MONTHLY_TARGET_G ? '#FF6B6B' : '#4CAF50';
+  document.getElementById('ma30Section').innerHTML = `
+    <div class="summary-row main">
+      <div>
+        <div class="label">🔮 30日移動平均</div>
+        <div class="target">今日基点・休肝日込み (月換算)</div>
+      </div>
+      <div class="value" style="color:${ma30_clr}">${ma30_monthlyG}g</div>
+    </div>
+    <div class="summary-row"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (g/日)</span><span class="count" style="color:${ma30_clr}">${ma30_avgG}g</span></div>
     <div class="summary-row"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (杯/日)</span><span class="count">${ma30_avgCups}杯</span></div>
-    <div class="summary-row"><span class="emoji">🔮</span><span class="label-text">月換算 (30日MA × 30)</span><span class="count" style="color:${ma30_clr}">${ma30_monthlyG}g</span></div>
     <div class="summary-row" style="font-size:11px; color:#999; padding-top:0;"><span class="emoji" style="visibility:hidden">.</span><span class="label-text">記録日数: ${ma30.n}/30日</span><span class="count" style="font-weight:normal; color:#999;"></span></div>
   `;
 }
