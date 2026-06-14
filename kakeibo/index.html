@@ -161,10 +161,10 @@ button { font-family: inherit; }
       <label>日付</label>
       <div class="date-nav">
         <button class="date-btn" onclick="navInputDate(-1)">← 前日</button>
-        <span class="date-val" id="inputDateVal"></span>
+        <span class="date-val" id="inputDateVal" onclick="openDatePicker()" style="cursor:pointer;"></span>
         <button class="date-btn" onclick="navInputDate(1)">翌日 →</button>
       </div>
-      <input type="date" id="inputDate" style="margin-top:8px;" onchange="onInputDateChange()">
+      <input type="date" id="inputDate" onchange="onInputDateChange()" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px;">
     </div>
     <div class="input-row">
       <label>項目名</label>
@@ -616,6 +616,11 @@ function navInputDate(delta) {
 function onInputDateChange() {
   inputDate = document.getElementById('inputDate').value || todayStr();
   refreshInputDate();
+}
+function openDatePicker() {
+  const el = document.getElementById('inputDate');
+  if (el.showPicker) { try { el.showPicker(); return; } catch (e) {} }
+  el.focus(); el.click();
 }
 function refreshInputDate() {
   document.getElementById('inputDateVal').textContent = fmtDateJP(inputDate);

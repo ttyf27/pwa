@@ -279,30 +279,6 @@ button { font-family: inherit; cursor: pointer; }
   </div>
 </div>
 
-<!-- 絶好調インジ (§31-A72 主観×客観) -->
-<div class="card">
-  <div class="card-title">🌟 絶好調インジ (主観×客観)</div>
-  <div class="zekko-grid">
-    <div class="zekko-cell">
-      <div class="z-label">💤 寝たzzz80超 直近30日</div>
-      <div class="z-val" id="zekkoRate80">-</div>
-      <div class="z-sub" id="zekkoRate80Sub"></div>
-    </div>
-    <div class="zekko-cell">
-      <div class="z-label">😊 ^o^率 直近30日</div>
-      <div class="z-val" id="zekkoHo">-</div>
-      <div class="z-sub" id="zekkoHoSub"></div>
-    </div>
-  </div>
-  <div class="zekko-quad" id="zekkoQuad">-</div>
-  <div class="zekko-month" id="zekkoMonth">
-    <div><span class="zm-label">📅 今月 寝たzzz80超</span></div>
-    <div><span class="zm-val" id="zekkoMonthVal">-</span> <span class="zm-pred" id="zekkoMonthPred"></span></div>
-  </div>
-  <div class="zekko-hist-title">📊 過去6ヶ月 寝たzzz80超 推移</div>
-  <div class="zekko-hist" id="zekkoHist"></div>
-</div>
-
 <!-- 疲労インジ -->
 <div class="card">
   <div class="card-title">🧭 疲労インジ</div>
@@ -318,6 +294,30 @@ button { font-family: inherit; cursor: pointer; }
       <div class="fat-detail" id="fatRhrDetail"></div>
     </div>
   </div>
+</div>
+
+<!-- 絶好調インジ (§31-A72 主観×客観) -->
+<div class="card">
+  <div class="card-title">🌟 絶好調インジ (主観×客観)</div>
+  <div class="zekko-grid">
+    <div class="zekko-cell">
+      <div class="z-label">💤 寝た80超 直近30日</div>
+      <div class="z-val" id="zekkoRate80">-</div>
+      <div class="z-sub" id="zekkoRate80Sub"></div>
+    </div>
+    <div class="zekko-cell">
+      <div class="z-label">😊 ^o^率 直近30日</div>
+      <div class="z-val" id="zekkoHo">-</div>
+      <div class="z-sub" id="zekkoHoSub"></div>
+    </div>
+  </div>
+  <div class="zekko-quad" id="zekkoQuad">-</div>
+  <div class="zekko-month" id="zekkoMonth">
+    <div><span class="zm-label">📅 今月 寝た💤80超</span></div>
+    <div><span class="zm-val" id="zekkoMonthVal">-</span> <span class="zm-pred" id="zekkoMonthPred"></span></div>
+  </div>
+  <div class="zekko-hist-title">📊 過去6ヶ月 寝た💤80超 推移</div>
+  <div class="zekko-hist" id="zekkoHist"></div>
 </div>
 
 <!-- AI気付き (placeholder) -->
@@ -347,22 +347,6 @@ button { font-family: inherit; cursor: pointer; }
   </div>
 </div>
 
-<!-- ボトムバー: dashboard 遷移 -->
-<div class="bottom-bar">
-  <a class="bb-btn" href="https://dashboard-ten-mauve-39.vercel.app/#calendar" target="_blank" rel="noopener">
-    <div class="bb-icon">📅</div>
-    <div class="bb-name">カレンダー</div>
-  </a>
-  <a class="bb-btn" href="https://dashboard-ten-mauve-39.vercel.app/#timeline" target="_blank" rel="noopener">
-    <div class="bb-icon">📋</div>
-    <div class="bb-name">タイムライン</div>
-  </a>
-  <a class="bb-btn" href="https://dashboard-ten-mauve-39.vercel.app/#analysis" target="_blank" rel="noopener">
-    <div class="bb-icon">📊</div>
-    <div class="bb-name">分析</div>
-  </a>
-</div>
-
 <!-- PAT modal -->
 <div class="modal-overlay" id="patModal" onclick="if(event.target===this)closePatModal()">
   <div class="modal">
@@ -370,7 +354,7 @@ button { font-family: inherit; cursor: pointer; }
     <div class="field">
       <label>Personal Access Token (PAT)</label>
       <input type="password" id="patInput" placeholder="github_pat_xxx..." autocomplete="off">
-      <div class="hint">cc_garmin リポジトリの Contents read 権限が必要。他のmylife系PWAと同じトークンが使えます。</div>
+      <div class="hint">ttyf27/mylife リポジトリの Contents read 権限が必要。他のmylife系PWAと同じトークンが使えます。</div>
     </div>
     <div class="actions">
       <button class="btn-secondary" onclick="closePatModal()">キャンセル</button>
