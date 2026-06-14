@@ -369,6 +369,8 @@ function dayTotalG(entry) {
   for (const [pid, count] of Object.entries(entry.drinks || {})) {
     if (count > 0 && presets[pid]) total += presets[pid].pure_alc_g * count;
   }
+  // 内訳が無い過去インポート日は記録済み合計g(total_pure_alc_g)を使う
+  if (total === 0 && entry.total_pure_alc_g) total = entry.total_pure_alc_g;
   return Math.round(total * 10) / 10;
 }
 
