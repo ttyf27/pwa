@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FFB84D">
+<link rel="manifest" href="./manifest.json">
+<title>🍚 次に行くとこ</title>
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", sans-serif;
+  background: #f5f5f7;
+  color: #1d1d1f;
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Header */
+.header {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e7;
+  padding: 14px 16px 10px;
+  padding-top: max(14px, env(safe-area-inset-top));
+  z-index: 100;
+}
+.header-row { display: flex; align-items: center; gap: 8px; }
+.title { flex: 1; font-size: 20px; font-weight: 700; }
+.icon-btn {
+  background: none; border: none; padding: 8px;
+  font-size: 16px; cursor: pointer; border-radius: 8px;
+  color: #6e6e73;
+}
+.icon-btn:active { background: #f0f0f0; }
+
+/* User toggle */
+.user-toggle {
+  display: flex; gap: 6px; margin-top: 10px;
+  background: #f0f0f0; padding: 3px; border-radius: 10px;
+}
+.user-btn {
+  flex: 1; padding: 8px 10px;
+  border: none; background: transparent;
+  font-size: 14px; font-weight: 600;
+  border-radius: 8px; cursor: pointer;
+  color: #6e6e73;
+  font-family: inherit;
+}
+.user-btn.active { background: #fff; color: #1d1d1f; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+/* Sections */
+.section { margin-top: 14px; }
+.section-title {
+  font-size: 13px; color: #6e6e73; font-weight: 600;
+  padding: 8px 18px 6px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.section-title .count { font-weight: 400; }
+.section-title .toggle { cursor: pointer; font-size: 12px; }
+
+/* List */
+.list {
+  background: #fff;
+  border-top: 1px solid #e5e5e7;
+  border-bottom: 1px solid #e5e5e7;
+}
+.item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 15px;
+  min-height: 48px;
+}
+.item:last-child { border-bottom: none; }
+.item:active { background: #f5f5f7; }
+.check {
+  width: 22px; height: 22px;
+  border: 1.5px solid #c7c7cc;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff;
+  transition: background 0.15s;
+}
+.check.checked {
+  background: #4DABF7; border-color: #4DABF7;
+  color: #fff;
+}
+.check.checked::after { content: '✓'; font-size: 13px; font-weight: 700; }
+.item-name { flex: 1; line-height: 1.4; }
+.item-name.done { text-decoration: line-through; color: #999; }
+.item-meta { font-size: 11px; color: #999; flex-shrink: 0; }
+.item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.item-del {
+  background: none; border: none;
+  color: #FF6B6B; font-size: 18px;
+  padding: 4px 8px; cursor: pointer;
+  border-radius: 6px;
+  font-family: inherit;
+}
+.item-del:active { background: #fef0f0; }
+
+.empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+}
+
+/* FAB */
+.fab {
+  position: fixed;
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px));
+  right: 20px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: #FFB84D;
+  color: #fff;
+  border: none;
+  font-size: 28px;
+  font-weight: 300;
+  box-shadow: 0 4px 12px rgba(255, 184, 77, 0.4);
+  cursor: pointer;
+  z-index: 50;
+  font-family: inherit;
+}
+.fab:active { transform: scale(0.95); }
+
+/* Add modal */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 200; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  width: 100%; max-width: 380px;
+}
+.modal h3 {
+  font-size: 17px; font-weight: 700;
+  margin: 0 0 12px; text-align: center;
+}
+.modal input[type="text"] {
+  width: 100%; padding: 12px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+}
+.modal-actions { display: flex; gap: 8px; margin-top: 14px; }
+.modal-actions button {
+  flex: 1; padding: 12px;
+  border-radius: 10px; border: none;
+  font-size: 14px; font-weight: 600;
+  min-height: 44px; cursor: pointer;
+  font-family: inherit;
+}
+.btn-primary { background: #FFB84D; color: #fff; }
+.btn-secondary { background: #f0f0f0; color: #1d1d1f; }
+
+/* Status */
+.status {
+  font-size: 11px;
+  color: #999;
+  padding: 8px 0 0;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <div class="title">🍚 次に行くとこ</div>
+    <button class="icon-btn" id="patBtn">⚙️</button>
+  </div>
+  <div class="user-toggle">
+    <button class="user-btn active" data-user="pochi">🐶 ぽっち</button>
+    <button class="user-btn" data-user="mayu">🌟 まゆ</button>
+  </div>
+  <div class="status" id="syncStatus">⚙️ PAT未設定</div>
+</div>
+
+<div class="section">
+  <div class="section-title">📌 行きたい <span class="count" id="countActive">0</span></div>
+  <div class="list" id="listActive"></div>
+</div>
+
+<div class="section">
+  <div class="section-title" id="doneToggle" style="cursor:pointer;">
+    ✅ 行った <span class="count" id="countDone">0</span>
+    <span class="toggle" id="doneArrow">▼</span>
+  </div>
+  <div class="list" id="listDone" style="display:none;"></div>
+</div>
+
+<button class="fab" id="fabAdd">+</button>
+
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h3>お店を追加</h3>
+    <input type="text" id="addInput" placeholder="例: 渋谷のラーメン屋" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn-secondary" id="addCancel">キャンセル</button>
+      <button class="btn-primary" id="addOk">追加</button>
+    </div>
+  </div>
+</div>
+
+<script src="./sync.js"></script>
+<script>
+'use strict';
+
+const STORAGE_KEY = 'gohan_data_v1';
+const USER_KEY = 'gohan_user_v1';
+
+function loadData() {
+  try {
+    const j = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (j && Array.isArray(j.places)) return j;
+  } catch (e) {}
+  return { version: 1, places: [] };
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let data = loadData();
+let currentUser = localStorage.getItem(USER_KEY) || 'pochi';
+
+const USER_LABELS = { pochi: '🐶', mayu: '🌟' };
+
+// ----- Sync -----
+const sync = new GitHubSync({
+  appName: 'gohan',
+  repoOwner: 'ttyf27',
+  repoName: 'mylife',
+  filePath: 'data/pwa/gohan.json',
+  branch: 'claude/garmin-data-analysis-V2xrD',
+  getData: () => data,
+});
+sync.attachStatusElement(document.getElementById('syncStatus'));
+document.getElementById('patBtn').addEventListener('click', () => sync.openSettings());
+
+// Initial fetch from GitHub (merge with local)
+async function initialFetch() {
+  const pat = sync.getPat();
+  if (!pat) return;
+  try {
+    const url = `https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' }
+    });
+    if (!res.ok) return;
+    const j = await res.json();
+    const decoded = decodeURIComponent(escape(atob(j.content.replace(/\n/g, ''))));
+    const remote = JSON.parse(decoded);
+    if (remote && Array.isArray(remote.places)) {
+      // Merge: remote-wins by id (server is source of truth)
+      data = remote;
+      saveData(data);
+      const m = sync.getMeta();
+      m.sha = j.sha;
+      m.lastSync = Date.now();
+      m.dirty = false;
+      sync.setMeta(m);
+      sync.updateStatus();
+      render();
+    }
+  } catch (e) {
+    console.warn('initial fetch failed:', e);
+  }
+}
+
+// ----- User toggle -----
+document.querySelectorAll('.user-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentUser = btn.dataset.user;
+    localStorage.setItem(USER_KEY, currentUser);
+  });
+});
+// Set initial user UI
+document.querySelectorAll('.user-btn').forEach(btn => {
+  btn.classList.toggle('active', btn.dataset.user === currentUser);
+});
+
+// ----- Done section toggle -----
+let doneOpen = false;
+document.getElementById('doneToggle').addEventListener('click', () => {
+  doneOpen = !doneOpen;
+  document.getElementById('listDone').style.display = doneOpen ? 'block' : 'none';
+  document.getElementById('doneArrow').textContent = doneOpen ? '▲' : '▼';
+});
+
+// ----- Render -----
+function render() {
+  const active = data.places.filter(p => !p.completed);
+  const done = data.places.filter(p => p.completed).sort((a, b) =>
+    (b.completedAt || '').localeCompare(a.completedAt || '')
+  );
+
+  document.getElementById('countActive').textContent = active.length ? `(${active.length})` : '';
+  document.getElementById('countDone').textContent = done.length ? `(${done.length})` : '';
+
+  // Active
+  const listActive = document.getElementById('listActive');
+  if (active.length === 0) {
+    const hasPat = !!sync.getPat();
+    if (!hasPat) {
+      listActive.innerHTML = '<div class="empty">⚙️ をタップして PAT を設定すると、登録済みの店リストが表示されます</div>';
+    } else {
+      listActive.innerHTML = '<div class="empty">行きたいお店を追加してください</div>';
+    }
+  } else {
+    listActive.innerHTML = '';
+    for (const p of active) {
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <div class="check" data-id="${p.id}" data-action="check"></div>
+        <div class="item-name">${escapeHtml(p.name)}</div>
+        <div class="item-meta">${USER_LABELS[p.addedBy] || ''}</div>
+        <button class="item-del" data-id="${p.id}" data-action="del">×</button>
+      `;
+      listActive.appendChild(div);
+    }
+  }
+
+  // Done (recent 20)
+  const listDone = document.getElementById('listDone');
+  if (done.length === 0) {
+    listDone.innerHTML = '<div class="empty">まだ行ったお店はありません</div>';
+  } else {
+    listDone.innerHTML = '';
+    for (const p of done.slice(0, 20)) {
+      const div = document.createElement('div');
+      div.className = 'item';
+      const dateStr = p.completedAt ? formatDate(p.completedAt) : '';
+      div.innerHTML = `
+        <div class="check checked" data-id="${p.id}" data-action="uncheck"></div>
+        <div class="item-name done">${escapeHtml(p.name)}</div>
+        <div class="item-meta">${dateStr} ${USER_LABELS[p.completedBy] || USER_LABELS[p.addedBy] || ''}</div>
+        <button class="item-del" data-id="${p.id}" data-action="del">×</button>
+      `;
+      listDone.appendChild(div);
+    }
+  }
+}
+
+function formatDate(iso) {
+  try {
+    const d = new Date(iso);
+    return `${d.getMonth()+1}/${d.getDate()}`;
+  } catch (e) { return ''; }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  );
+}
+
+// ----- Event delegation -----
+document.body.addEventListener('click', e => {
+  const t = e.target.closest('[data-action]');
+  if (!t) return;
+  const id = t.dataset.id;
+  const action = t.dataset.action;
+  const idx = data.places.findIndex(p => p.id === id);
+  if (idx < 0) return;
+
+  if (action === 'check') {
+    data.places[idx].completed = true;
+    data.places[idx].completedAt = new Date().toISOString();
+    data.places[idx].completedBy = currentUser;
+  } else if (action === 'uncheck') {
+    data.places[idx].completed = false;
+    data.places[idx].completedAt = null;
+    data.places[idx].completedBy = null;
+  } else if (action === 'del') {
+    if (!confirm(`「${data.places[idx].name}」を削除しますか?`)) return;
+    data.places.splice(idx, 1);
+  }
+  saveData(data);
+  render();
+  sync.markDirtyAndPush();
+});
+
+// ----- Add modal -----
+const modal = document.getElementById('addModal');
+const addInput = document.getElementById('addInput');
+document.getElementById('fabAdd').addEventListener('click', () => {
+  addInput.value = '';
+  modal.classList.add('open');
+  setTimeout(() => addInput.focus(), 50);
+});
+document.getElementById('addCancel').addEventListener('click', () => modal.classList.remove('open'));
+modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
+function addPlace() {
+  const name = addInput.value.trim();
+  if (!name) return;
+  const id = (crypto.randomUUID && crypto.randomUUID()) || (Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+  data.places.unshift({
+    id,
+    name,
+    addedBy: currentUser,
+    addedAt: new Date().toISOString(),
+    completed: false,
+    completedAt: null,
+    completedBy: null
+  });
+  saveData(data);
+  render();
+  sync.markDirtyAndPush();
+  modal.classList.remove('open');
+}
+document.getElementById('addOk').addEventListener('click', addPlace);
+addInput.addEventListener('keydown', e => { if (e.key === 'Enter') addPlace(); });
+
+// ----- Boot -----
+render();
+initialFetch();
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW reg failed:', e));
+}
+</script>
+</body>
+</html>

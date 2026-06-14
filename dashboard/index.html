@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="dashboard">
+<meta name="theme-color" content="#673AB7">
+<link rel="manifest" href="manifest.json">
+<title>dashboard</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; background: #f5f5f7; color: #1d1d1f; padding-bottom: 80px; min-height: 100vh; -webkit-text-size-adjust: 100%; }
+button { font-family: inherit; }
+
+.header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-bottom: 1px solid #d2d2d7; position: sticky; top: 0; z-index: 10; padding-top: max(12px, env(safe-area-inset-top)); }
+.header-title { font-size: 16px; font-weight: 700; flex: 1; text-align: center; }
+.nav-btn { padding: 6px 12px; background: #f0f0f0; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; min-width: 44px; min-height: 36px; }
+.refresh-btn { padding: 6px 10px; background: #f0f0f0; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; min-height: 36px; }
+
+.sub-tabs { display: flex; background: #fff; border-bottom: 1px solid #f0f0f0; }
+.sub-tab { flex: 1; padding: 10px 4px; font-size: 13px; background: #fff; border: none; cursor: pointer; color: #6e6e73; font-weight: 500; border-bottom: 2px solid transparent; }
+.sub-tab.active { color: #673AB7; border-bottom-color: #673AB7; font-weight: 700; }
+
+.status-bar { background: #f5f5f7; padding: 6px 14px; font-size: 11px; color: #6e6e73; display: flex; justify-content: space-between; align-items: center; }
+.status-bar .status-err { color: #FF6B6B; }
+
+/* Calendar view */
+.cal-day-headers { display: grid; grid-template-columns: repeat(7, 1fr); background: #fff; padding: 6px 4px 0; }
+.cal-day-header { text-align: center; font-size: 11px; font-weight: 700; padding: 4px 0; }
+.cal-day-header.sun { color: #FF6B6B; }
+.cal-day-header.sat { color: #4DABF7; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 0 4px 8px; background: #fff; }
+.cal-cell { aspect-ratio: 0.7; border: 1px solid #e5e5ea; display: flex; flex-direction: column; padding: 3px 2px; font-size: 10px; position: relative; }
+.cal-cell.empty { background: #fafafa; }
+.cal-cell.today { border-color: #673AB7; border-width: 2px; }
+.cal-cell .cdate { font-size: 11px; font-weight: 600; color: #1d1d1f; text-align: center; }
+.cal-cell .cemoji { font-size: 16px; line-height: 1.1; text-align: center; margin-top: 2px; min-height: 18px; font-family: monospace; }
+.cal-cell .calc { font-size: 10px; color: #FF6B6B; text-align: center; line-height: 1.2; }
+.cal-cell .cexp { font-size: 9px; color: #6e6e73; text-align: center; line-height: 1.2; margin-top: auto; }
+
+.summary-card { background: #fff; margin: 8px; padding: 12px 14px; border-radius: 12px; }
+.summary-card .sc-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #1d1d1f; }
+.summary-card .sc-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+.summary-card .sc-row .sc-val { font-weight: 700; }
+.summary-card .sc-mental { color: #E91E63; }
+.summary-card .sc-alcohol { color: #FF9800; }
+.summary-card .sc-expense { color: #FF6B6B; }
+.summary-card .sc-income { color: #4DABF7; }
+
+/* Timeline view */
+.timeline-section { background: #fff; margin: 8px; border-radius: 12px; overflow: hidden; }
+.tl-row { display: grid; grid-template-columns: 50px 1fr 1fr 1fr; align-items: center; padding: 8px 10px; border-bottom: 1px solid #f0f0f0; gap: 6px; font-size: 12px; }
+.tl-row:last-child { border-bottom: none; }
+.tl-row.tl-header { background: #f5f5f7; font-size: 11px; font-weight: 700; color: #6e6e73; padding: 6px 10px; }
+.tl-row .tl-date { font-weight: 600; }
+.tl-row .tl-date .tl-wk { font-size: 10px; color: #6e6e73; margin-left: 2px; }
+.tl-row .tl-date.tl-sun { color: #FF6B6B; }
+.tl-row .tl-date.tl-sat { color: #4DABF7; }
+.tl-row .tl-mental { font-family: monospace; font-size: 14px; }
+.tl-row .tl-alc { color: #FF9800; font-weight: 600; text-align: right; }
+.tl-row .tl-exp { color: #FF6B6B; font-weight: 600; text-align: right; }
+.tl-row .tl-comment { grid-column: 2 / -1; padding-left: 0; font-size: 11px; color: #6e6e73; word-break: break-all; line-height: 1.4; }
+.tl-row.tl-with-comment { display: block; padding: 8px 10px; }
+.tl-row.tl-with-comment .tl-main { display: grid; grid-template-columns: 50px 1fr 1fr 1fr; gap: 6px; align-items: center; }
+.tl-row.tl-with-comment .tl-comment { margin-top: 4px; padding-left: 56px; }
+
+/* Analysis view */
+.chart-card { background: #fff; margin: 8px; padding: 12px 14px; border-radius: 12px; }
+.chart-card .chart-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.chart-card .chart-sub { font-size: 11px; color: #6e6e73; margin-bottom: 8px; }
+.chart-svg { width: 100%; display: block; }
+.chart-legend { display: flex; gap: 12px; justify-content: center; margin-top: 4px; font-size: 11px; color: #6e6e73; }
+.chart-legend .lgd-item { display: flex; align-items: center; gap: 4px; }
+.chart-legend .lgd-dot { width: 10px; height: 10px; border-radius: 50%; }
+.month-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 11px; }
+.month-bar-row .mbr-label { width: 50px; color: #6e6e73; flex-shrink: 0; }
+.month-bar-row .mbr-bg { flex: 1; height: 14px; background: #f0f0f0; border-radius: 4px; overflow: hidden; position: relative; }
+.month-bar-row .mbr-fill { height: 100%; border-radius: 4px; }
+.month-bar-row .mbr-val { width: 60px; text-align: right; font-weight: 600; flex-shrink: 0; }
+.corr-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
+.corr-row:last-child { border-bottom: none; }
+.corr-row .corr-name { color: #1d1d1f; }
+.corr-row .corr-val { font-weight: 700; }
+.corr-row .corr-val.pos { color: #4DABF7; }
+.corr-row .corr-val.neg { color: #FF6B6B; }
+
+.empty-msg { padding: 30px 20px; text-align: center; color: #6e6e73; font-size: 13px; }
+.loading-msg { padding: 40px 20px; text-align: center; color: #6e6e73; font-size: 14px; }
+
+/* Bottom nav */
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.97); backdrop-filter: blur(10px); border-top: 1px solid #d2d2d7; display: flex; padding-bottom: max(4px, env(safe-area-inset-bottom)); z-index: 5; }
+.bn-btn { flex: 1; padding: 8px 2px 6px; background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; color: #6e6e73; font-size: 10px; min-height: 56px; }
+.bn-btn.active { color: #673AB7; }
+.bn-btn .bn-icon { font-size: 22px; line-height: 1; }
+.bn-btn .bn-label { font-size: 10px; font-weight: 500; }
+
+.view { display: none; }
+.view.active { display: block; }
+
+/* PAT setup modal */
+.simple-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+.simple-overlay.open { display: flex; }
+.simple-modal { background: #fff; border-radius: 14px; padding: 20px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; }
+.simple-modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 14px; text-align: center; }
+.simple-modal .field { margin-bottom: 12px; }
+.simple-modal label { display: block; font-size: 12px; color: #6e6e73; margin-bottom: 4px; }
+.simple-modal input { width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 13px; font-family: monospace; }
+.simple-modal .hint { font-size: 11px; color: #6e6e73; margin-top: 4px; line-height: 1.4; }
+.simple-modal .actions { display: flex; gap: 8px; margin-top: 14px; }
+.simple-modal .actions button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; min-height: 44px; font-family: inherit; }
+.simple-modal .actions .btn-primary { background: #673AB7; color: #fff; }
+.simple-modal .actions .btn-secondary { background: #f0f0f0; color: #1d1d1f; }
+
+/* Day detail modal */
+.detail-modal { background: #fff; border-radius: 14px; padding: 20px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; }
+.detail-modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 14px; text-align: center; }
+.detail-section { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.detail-section:last-child { border-bottom: none; }
+.detail-section .ds-label { font-size: 11px; color: #6e6e73; margin-bottom: 4px; }
+.detail-section .ds-value { font-size: 14px; }
+.detail-section .ds-emoji { font-family: monospace; font-size: 16px; font-weight: 700; }
+.detail-modal .close-btn { width: 100%; padding: 12px; background: #f0f0f0; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 14px; font-family: inherit; }
+</style>
+</head>
+<body>
+
+<!-- ========= カレンダー view ========= -->
+<div class="view active" id="view-cal">
+  <div class="header">
+    <button class="nav-btn" onclick="navMonth(-1)">←</button>
+    <div class="header-title" id="calMonthLabel"></div>
+    <button class="nav-btn" onclick="navMonth(1)">→</button>
+  </div>
+  <div class="status-bar" id="statusBar">
+    <span id="statusText">読み込み中...</span>
+    <button class="refresh-btn" onclick="reloadAll()">🔄 更新</button>
+  </div>
+  <div class="cal-day-headers">
+    <div class="cal-day-header sun">日</div>
+    <div class="cal-day-header">月</div>
+    <div class="cal-day-header">火</div>
+    <div class="cal-day-header">水</div>
+    <div class="cal-day-header">木</div>
+    <div class="cal-day-header">金</div>
+    <div class="cal-day-header sat">土</div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+  <div class="summary-card">
+    <div class="sc-title" id="calMonthSummaryTitle">月サマリー</div>
+    <div class="sc-row"><span>😊 メンタル平均</span><span class="sc-val sc-mental" id="sumMental">-</span></div>
+    <div class="sc-row"><span>🍺 純アルコール合計</span><span class="sc-val sc-alcohol" id="sumAlc">-</span></div>
+    <div class="sc-row"><span>🍺 飲酒日数</span><span class="sc-val sc-alcohol" id="sumDrinkDays">-</span></div>
+    <div class="sc-row"><span>🍺 休肝日数</span><span class="sc-val sc-alcohol" id="sumRestDays">-</span></div>
+    <div class="sc-row"><span>💴 支出合計</span><span class="sc-val sc-expense" id="sumExp">-</span></div>
+    <div class="sc-row"><span>💴 収入合計</span><span class="sc-val sc-income" id="sumInc">-</span></div>
+  </div>
+</div>
+
+<!-- ========= タイムライン view ========= -->
+<div class="view" id="view-tl">
+  <div class="header">
+    <button class="nav-btn" onclick="navMonth(-1)">←</button>
+    <div class="header-title" id="tlMonthLabel"></div>
+    <button class="nav-btn" onclick="navMonth(1)">→</button>
+  </div>
+  <div class="timeline-section">
+    <div class="tl-row tl-header">
+      <span>日付</span><span style="text-align:center;">😊</span><span style="text-align:right;">🍺(g)</span><span style="text-align:right;">💴(¥)</span>
+    </div>
+    <div id="tlBody"></div>
+  </div>
+</div>
+
+<!-- ========= 分析 view ========= -->
+<div class="view" id="view-analysis">
+  <div class="header">
+    <span></span>
+    <div class="header-title">分析</div>
+    <span></span>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">📈 月別メンタル平均 (過去12ヶ月)</div>
+    <div class="chart-sub">スコア: 0(もう無理)〜5(絶好調)</div>
+    <svg class="chart-svg" id="chartMental" viewBox="0 0 320 140"></svg>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">📊 月別 純アルコール量 (g)</div>
+    <div id="alcBarsBody"></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">📊 月別 支出 (¥)</div>
+    <div id="expBarsBody"></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">🔗 相関 (日次データ、月内集計から算出)</div>
+    <div class="chart-sub">|r|≥0.3で有意傾向、≥0.5で強い相関</div>
+    <div id="corrBody"></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">⚡ 直近7日サマリー</div>
+    <div id="last7Body"></div>
+  </div>
+</div>
+
+<!-- PAT setup modal -->
+<div class="simple-overlay" id="patModal">
+  <div class="simple-modal">
+    <h3>GitHub PAT 設定</h3>
+    <div class="field">
+      <label>Personal Access Token (PAT)</label>
+      <input type="password" id="patInput" placeholder="github_pat_xxx..." autocomplete="off">
+      <div class="hint">cc_garmin リポジトリの Contents read 権限が必要。gokigen/alcohol/kakeibo と同じトークンが使えます。</div>
+    </div>
+    <div class="actions">
+      <button class="btn-secondary" onclick="closePatModal()">キャンセル</button>
+      <button class="btn-primary" onclick="savePat()">保存して読み込み</button>
+    </div>
+  </div>
+</div>
+
+<!-- Day detail modal -->
+<div class="simple-overlay" id="detailModal">
+  <div class="detail-modal" id="detailContent"></div>
+</div>
+
+<!-- Bottom nav -->
+<div class="bottom-nav">
+  <button class="bn-btn active" data-view="cal" onclick="setView('cal')"><span class="bn-icon">📅</span><span class="bn-label">カレンダー</span></button>
+  <button class="bn-btn" data-view="tl" onclick="setView('tl')"><span class="bn-icon">📋</span><span class="bn-label">タイムライン</span></button>
+  <button class="bn-btn" data-view="analysis" onclick="setView('analysis')"><span class="bn-icon">📊</span><span class="bn-label">分析</span></button>
+</div>
+
+<script>
+'use strict';
+
+const PAT_KEY = '__github_pat';
+const CACHE_KEY = '__dashboard_cache';
+const REPO_OWNER = 'ttyf27';
+const REPO_NAME = 'mylife';
+const BRANCH = 'claude/garmin-data-analysis-V2xrD';
+
+// Emoji scoring (parse_gokigen.py 準拠)
+const EMOJI_SCORE = {
+  '^o^': 5, '^_^': 4, '~.~': 3, '>_<': 2, '*_*': 2, 'ز_ز': 1, '--#': 1, 'T-T': 0,
+};
+
+// State
+let allData = { gokigen: {}, alcohol: { data: {}, dailyPureG: {} }, kakeibo: { entries: [], categories: [], incomeCategories: [] } };
+let currentMonth = ymStr(new Date());
+let lastFetch = null;
+let fetchError = null;
+
+function ymStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function weekday(d) { return ['日','月','火','水','木','金','土'][d.getDay()]; }
+function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtYen(n) { return '¥' + (n||0).toLocaleString(); }
+function fmtShortYen(n) {
+  if (Math.abs(n) >= 10000) return (Math.round(n/1000)/10) + '万';
+  if (Math.abs(n) >= 1000) return (Math.round(n/100)/10) + 'k';
+  return String(n);
+}
+
+function getPat() { return localStorage.getItem(PAT_KEY) || ''; }
+function setPat(v) { if (v) localStorage.setItem(PAT_KEY, v); else localStorage.removeItem(PAT_KEY); }
+
+// ========= Data loading =========
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (raw) {
+      const c = JSON.parse(raw);
+      allData = c.allData || allData;
+      lastFetch = c.lastFetch || null;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+function saveCache() {
+  localStorage.setItem(CACHE_KEY, JSON.stringify({ allData, lastFetch }));
+}
+
+async function fetchJson(path) {
+  const pat = getPat();
+  if (!pat) throw new Error('PAT未設定');
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${encodeURIComponent(BRANCH)}`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' }
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json();
+  // content is base64
+  const decoded = decodeURIComponent(escape(atob(j.content.replace(/\n/g, ''))));
+  return JSON.parse(decoded);
+}
+
+async function reloadAll() {
+  const pat = getPat();
+  if (!pat) {
+    openPatModal();
+    return;
+  }
+  updateStatus('読み込み中...', false);
+  fetchError = null;
+  try {
+    const [gokigen, alcohol, kakeibo] = await Promise.all([
+      fetchJson('data/pwa/gokigen.json').catch(() => null),
+      fetchJson('data/pwa/alcohol.json').catch(() => null),
+      fetchJson('data/pwa/kakeibo.json').catch(() => null),
+    ]);
+    if (gokigen) allData.gokigen = gokigen;
+    if (alcohol) allData.alcohol = alcohol;
+    if (kakeibo) allData.kakeibo = kakeibo;
+    lastFetch = Date.now();
+    saveCache();
+    updateStatus(`☁️ ${fmtFetchTime(lastFetch)}`, false);
+    renderAll();
+  } catch(e) {
+    fetchError = e.message;
+    updateStatus(`⚠️ 取得失敗: ${e.message}`, true);
+    renderAll(); // render from cache
+  }
+}
+
+function updateStatus(text, isError) {
+  const el = document.getElementById('statusText');
+  el.textContent = text;
+  el.className = isError ? 'status-err' : '';
+}
+function fmtFetchTime(t) {
+  const ago = Math.floor((Date.now() - t) / 60000);
+  if (ago < 1) return '同期済';
+  if (ago < 60) return `${ago}分前に同期`;
+  const d = new Date(t);
+  return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ========= View navigation =========
+function setView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.bn-btn').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+  window.scrollTo(0, 0);
+  renderAll();
+}
+function navMonth(delta) {
+  const [y, m] = currentMonth.split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  currentMonth = ymStr(d);
+  renderAll();
+}
+
+// ========= Data accessors =========
+function getMentalScore(date) {
+  const e = allData.gokigen[date];
+  if (!e || !e.emoji) return null;
+  const score = EMOJI_SCORE[e.emoji];
+  return score == null ? null : score;
+}
+function getMentalEmoji(date) {
+  const e = allData.gokigen[date];
+  return e && e.emoji ? e.emoji : '';
+}
+function getMentalComment(date) {
+  const e = allData.gokigen[date];
+  return e && e.comment ? e.comment : '';
+}
+function getAlcG(date) {
+  const dpg = (allData.alcohol && allData.alcohol.dailyPureG) || {};
+  return dpg[date] != null ? dpg[date] : null;
+}
+function getExpenseTotal(date) {
+  const entries = (allData.kakeibo && allData.kakeibo.entries) || [];
+  let t = 0;
+  for (const e of entries) if (e.date === date && e.type === 'expense') t += e.amount;
+  return t;
+}
+function getIncomeTotal(date) {
+  const entries = (allData.kakeibo && allData.kakeibo.entries) || [];
+  let t = 0;
+  for (const e of entries) if (e.date === date && e.type === 'income') t += e.amount;
+  return t;
+}
+
+// ========= Calendar =========
+function renderCalendar() {
+  const [y, m] = currentMonth.split('-').map(Number);
+  document.getElementById('calMonthLabel').textContent = `${y}年 ${m}月`;
+  document.getElementById('calMonthSummaryTitle').textContent = `${y}年 ${m}月 サマリー`;
+  document.getElementById('tlMonthLabel').textContent = `${y}年 ${m}月`;
+
+  const first = new Date(y, m-1, 1);
+  const last = new Date(y, m, 0);
+  const today = todayStr();
+
+  let html = '';
+  for (let i = 0; i < first.getDay(); i++) html += `<div class="cal-cell empty"></div>`;
+  for (let d = 1; d <= last.getDate(); d++) {
+    const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const emoji = getMentalEmoji(dateStr);
+    const alc = getAlcG(dateStr);
+    const exp = getExpenseTotal(dateStr);
+    const isToday = dateStr === today;
+    html += `<div class="cal-cell ${isToday ? 'today' : ''}" onclick="openDetail('${dateStr}')">
+      <div class="cdate">${d}</div>
+      <div class="cemoji">${escapeHtml(emoji)}</div>
+      <div class="calc">${alc != null ? alc + 'g' : ''}</div>
+      <div class="cexp">${exp > 0 ? fmtShortYen(exp) : ''}</div>
+    </div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+
+  // 月サマリー
+  const monthDates = monthDateList(y, m);
+  let mentalSum = 0, mentalCnt = 0;
+  let alcSum = 0, drinkDays = 0, restDays = 0;
+  let expSum = 0, incSum = 0;
+  monthDates.forEach(d => {
+    const s = getMentalScore(d);
+    if (s != null) { mentalSum += s; mentalCnt++; }
+    const a = getAlcG(d);
+    if (a != null) {
+      if (a > 0) { drinkDays++; alcSum += a; }
+      else restDays++;
+    }
+    expSum += getExpenseTotal(d);
+    incSum += getIncomeTotal(d);
+  });
+  document.getElementById('sumMental').textContent = mentalCnt > 0 ? `${(mentalSum/mentalCnt).toFixed(2)} (${mentalCnt}日)` : '-';
+  document.getElementById('sumAlc').textContent = `${alcSum.toFixed(1)} g`;
+  document.getElementById('sumDrinkDays').textContent = `${drinkDays} 日`;
+  document.getElementById('sumRestDays').textContent = `${restDays} 日`;
+  document.getElementById('sumExp').textContent = fmtYen(expSum);
+  document.getElementById('sumInc').textContent = fmtYen(incSum);
+}
+function monthDateList(y, m) {
+  const last = new Date(y, m, 0).getDate();
+  const arr = [];
+  for (let d = 1; d <= last; d++) {
+    arr.push(`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+  }
+  return arr;
+}
+
+// ========= Timeline =========
+function renderTimeline() {
+  const [y, m] = currentMonth.split('-').map(Number);
+  const dates = monthDateList(y, m).sort((a,b) => b.localeCompare(a));
+  let html = '';
+  dates.forEach(date => {
+    const emoji = getMentalEmoji(date);
+    const score = getMentalScore(date);
+    const alc = getAlcG(date);
+    const exp = getExpenseTotal(date);
+    const inc = getIncomeTotal(date);
+    const comment = getMentalComment(date);
+    const dt = new Date(date);
+    const wk = weekday(dt);
+    const wkCls = wk === '日' ? 'tl-sun' : (wk === '土' ? 'tl-sat' : '');
+    const [, mm, dd] = date.split('-');
+    const hasContent = emoji || alc != null || exp > 0 || inc > 0;
+    if (!hasContent) return;
+    const main = `<span class="tl-date ${wkCls}">${parseInt(mm)}/${parseInt(dd)}<span class="tl-wk">(${wk})</span></span>
+      <span class="tl-mental" style="text-align:center;">${escapeHtml(emoji) || '-'}</span>
+      <span class="tl-alc">${alc != null && alc > 0 ? alc + 'g' : (alc === 0 ? '休' : '-')}</span>
+      <span class="tl-exp">${exp > 0 ? fmtShortYen(exp) : '-'}</span>`;
+    if (comment) {
+      html += `<div class="tl-row tl-with-comment" onclick="openDetail('${date}')"><div class="tl-main">${main}</div><div class="tl-comment">${escapeHtml(comment)}</div></div>`;
+    } else {
+      html += `<div class="tl-row" onclick="openDetail('${date}')">${main}</div>`;
+    }
+  });
+  if (!html) html = '<div class="empty-msg">この月のデータはありません</div>';
+  document.getElementById('tlBody').innerHTML = html;
+}
+
+// ========= Analysis =========
+function renderAnalysis() {
+  renderMentalChart();
+  renderAlcBars();
+  renderExpBars();
+  renderCorrelations();
+  renderLast7();
+}
+
+function getMonthlySummaries() {
+  // 過去12ヶ月分の月別サマリー
+  const now = new Date();
+  const months = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(ymStr(d));
+  }
+  return months.map(ym => {
+    const [y, m] = ym.split('-').map(Number);
+    const dates = monthDateList(y, m);
+    let mSum = 0, mCnt = 0, aSum = 0, aCnt = 0, drinkDays = 0, restDays = 0, eSum = 0;
+    dates.forEach(d => {
+      const s = getMentalScore(d);
+      if (s != null) { mSum += s; mCnt++; }
+      const a = getAlcG(d);
+      if (a != null) {
+        aCnt++;
+        if (a > 0) { drinkDays++; aSum += a; }
+        else restDays++;
+      }
+      eSum += getExpenseTotal(d);
+    });
+    return {
+      ym,
+      mAvg: mCnt > 0 ? mSum / mCnt : null,
+      mCnt,
+      aTotal: aSum,
+      drinkDays,
+      restDays,
+      eTotal: eSum,
+    };
+  });
+}
+
+function renderMentalChart() {
+  const months = getMonthlySummaries();
+  const svg = document.getElementById('chartMental');
+  const W = 320, H = 140, pad = { l: 30, r: 8, t: 8, b: 24 };
+  const innerW = W - pad.l - pad.r;
+  const innerH = H - pad.t - pad.b;
+  const xs = months.map((_, i) => pad.l + i / (months.length - 1) * innerW);
+  const ys = months.map(m => m.mAvg != null ? pad.t + (1 - m.mAvg / 5) * innerH : null);
+
+  let html = '';
+  // y軸グリッド (0-5)
+  for (let v = 0; v <= 5; v++) {
+    const y = pad.t + (1 - v/5) * innerH;
+    html += `<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="#f0f0f0" stroke-width="1"/>`;
+    html += `<text x="${pad.l-4}" y="${y+3}" font-size="9" fill="#999" text-anchor="end">${v}</text>`;
+  }
+  // 折れ線
+  const pts = [];
+  ys.forEach((y, i) => { if (y != null) pts.push([xs[i], y]); });
+  for (let i = 0; i < pts.length - 1; i++) {
+    html += `<line x1="${pts[i][0]}" y1="${pts[i][1]}" x2="${pts[i+1][0]}" y2="${pts[i+1][1]}" stroke="#E91E63" stroke-width="2"/>`;
+  }
+  // ドット + 値
+  ys.forEach((y, i) => {
+    if (y != null) {
+      html += `<circle cx="${xs[i]}" cy="${y}" r="3" fill="#E91E63"/>`;
+      html += `<text x="${xs[i]}" y="${y-6}" font-size="9" fill="#666" text-anchor="middle">${months[i].mAvg.toFixed(1)}</text>`;
+    }
+  });
+  // x軸ラベル
+  months.forEach((m, i) => {
+    if (i % 2 === 0 || i === months.length - 1) {
+      const mm = m.ym.split('-')[1];
+      html += `<text x="${xs[i]}" y="${H-8}" font-size="9" fill="#666" text-anchor="middle">${parseInt(mm)}月</text>`;
+    }
+  });
+  svg.innerHTML = html;
+}
+
+function renderAlcBars() {
+  const months = getMonthlySummaries();
+  const max = Math.max(...months.map(m => m.aTotal), 100);
+  let html = '';
+  months.forEach(m => {
+    const pct = max > 0 ? (m.aTotal / max) * 100 : 0;
+    html += `<div class="month-bar-row">
+      <div class="mbr-label">${m.ym.slice(2).replace('-','/')}</div>
+      <div class="mbr-bg"><div class="mbr-fill" style="width:${pct}%; background:#FF9800;"></div></div>
+      <div class="mbr-val">${Math.round(m.aTotal)}g</div>
+    </div>`;
+  });
+  document.getElementById('alcBarsBody').innerHTML = html;
+}
+
+function renderExpBars() {
+  const months = getMonthlySummaries();
+  const max = Math.max(...months.map(m => m.eTotal), 10000);
+  let html = '';
+  months.forEach(m => {
+    const pct = max > 0 ? (m.eTotal / max) * 100 : 0;
+    html += `<div class="month-bar-row">
+      <div class="mbr-label">${m.ym.slice(2).replace('-','/')}</div>
+      <div class="mbr-bg"><div class="mbr-fill" style="width:${pct}%; background:#FF6B6B;"></div></div>
+      <div class="mbr-val">${fmtShortYen(m.eTotal)}</div>
+    </div>`;
+  });
+  document.getElementById('expBarsBody').innerHTML = html;
+}
+
+function pearson(xs, ys) {
+  const n = xs.length;
+  if (n < 3) return null;
+  let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+  for (let i = 0; i < n; i++) {
+    sx += xs[i]; sy += ys[i];
+    sxx += xs[i]*xs[i]; syy += ys[i]*ys[i];
+    sxy += xs[i]*ys[i];
+  }
+  const denom = Math.sqrt((n*sxx - sx*sx) * (n*syy - sy*sy));
+  if (denom === 0) return null;
+  return (n*sxy - sx*sy) / denom;
+}
+
+function renderCorrelations() {
+  // 日次データの3軸を集めて相関算出
+  const dates = new Set();
+  Object.keys(allData.gokigen || {}).forEach(d => dates.add(d));
+  Object.keys((allData.alcohol && allData.alcohol.dailyPureG) || {}).forEach(d => dates.add(d));
+  ((allData.kakeibo && allData.kakeibo.entries) || []).forEach(e => dates.add(e.date));
+  const sortedDates = [...dates].sort();
+
+  // pairs: mental × alcohol
+  const mPairs = sortedDates.map(d => [getMentalScore(d), getAlcG(d)]).filter(p => p[0] != null && p[1] != null);
+  const r_mental_alc = mPairs.length >= 3 ? pearson(mPairs.map(p=>p[0]), mPairs.map(p=>p[1])) : null;
+
+  // pairs: alcohol × expense (same day)
+  const aPairs = sortedDates.map(d => [getAlcG(d), getExpenseTotal(d)]).filter(p => p[0] != null);
+  const r_alc_exp = aPairs.length >= 3 ? pearson(aPairs.map(p=>p[0]), aPairs.map(p=>p[1])) : null;
+
+  // pairs: mental × expense
+  const mePairs = sortedDates.map(d => [getMentalScore(d), getExpenseTotal(d)]).filter(p => p[0] != null);
+  const r_mental_exp = mePairs.length >= 3 ? pearson(mePairs.map(p=>p[0]), mePairs.map(p=>p[1])) : null;
+
+  // 翌日メンタル: 当日酒 → 翌日メンタル
+  const tomorrowMental = sortedDates.map(d => {
+    const dt = new Date(d);
+    dt.setDate(dt.getDate() + 1);
+    const next = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    return [getAlcG(d), getMentalScore(next)];
+  }).filter(p => p[0] != null && p[1] != null);
+  const r_alc_nextmental = tomorrowMental.length >= 3 ? pearson(tomorrowMental.map(p=>p[0]), tomorrowMental.map(p=>p[1])) : null;
+
+  const rows = [
+    { name: '酒(同日) × メンタル', r: r_mental_alc, n: mPairs.length },
+    { name: '酒(前日) × 翌日メンタル', r: r_alc_nextmental, n: tomorrowMental.length },
+    { name: '酒 × 支出(同日)', r: r_alc_exp, n: aPairs.length },
+    { name: 'メンタル × 支出(同日)', r: r_mental_exp, n: mePairs.length },
+  ];
+  let html = '';
+  rows.forEach(row => {
+    if (row.r == null) {
+      html += `<div class="corr-row"><span class="corr-name">${row.name}</span><span class="corr-val">- (n=${row.n})</span></div>`;
+    } else {
+      const cls = row.r >= 0 ? 'pos' : 'neg';
+      const sign = row.r >= 0 ? '+' : '';
+      html += `<div class="corr-row"><span class="corr-name">${row.name}</span><span class="corr-val ${cls}">r = ${sign}${row.r.toFixed(2)} (n=${row.n})</span></div>`;
+    }
+  });
+  document.getElementById('corrBody').innerHTML = html;
+}
+
+function renderLast7() {
+  const today = new Date();
+  let mSum = 0, mCnt = 0, aSum = 0, drinkDays = 0, eSum = 0, hasComment = 0;
+  const dailyDetail = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const s = getMentalScore(dateStr);
+    if (s != null) { mSum += s; mCnt++; }
+    const a = getAlcG(dateStr);
+    if (a != null && a > 0) { aSum += a; drinkDays++; }
+    eSum += getExpenseTotal(dateStr);
+    const cm = getMentalComment(dateStr);
+    if (cm) hasComment++;
+    dailyDetail.unshift({ date: dateStr, mental: getMentalEmoji(dateStr), alc: a, exp: getExpenseTotal(dateStr) });
+  }
+  let html = '<div style="font-size:12px; line-height:1.7;">';
+  html += `<div style="display:flex; justify-content:space-between;"><span>メンタル平均</span><span style="font-weight:700; color:#E91E63;">${mCnt > 0 ? (mSum/mCnt).toFixed(2) : '-'} (${mCnt}日)</span></div>`;
+  html += `<div style="display:flex; justify-content:space-between;"><span>純アル合計</span><span style="font-weight:700; color:#FF9800;">${aSum.toFixed(1)}g (${drinkDays}日飲酒)</span></div>`;
+  html += `<div style="display:flex; justify-content:space-between;"><span>支出合計</span><span style="font-weight:700; color:#FF6B6B;">${fmtYen(eSum)}</span></div>`;
+  html += `<div style="display:flex; justify-content:space-between;"><span>コメント記入日</span><span style="font-weight:700;">${hasComment}日</span></div>`;
+  html += '</div>';
+  document.getElementById('last7Body').innerHTML = html;
+}
+
+// ========= Detail modal =========
+function openDetail(date) {
+  const emoji = getMentalEmoji(date);
+  const comment = getMentalComment(date);
+  const alc = getAlcG(date);
+  const exp = getExpenseTotal(date);
+  const inc = getIncomeTotal(date);
+  const drinks = (allData.alcohol && allData.alcohol.data && allData.alcohol.data[date]) ? allData.alcohol.data[date] : null;
+  const expEntries = ((allData.kakeibo && allData.kakeibo.entries) || []).filter(e => e.date === date);
+
+  const dt = new Date(date);
+  const dateLabel = `${dt.getFullYear()}/${dt.getMonth()+1}/${dt.getDate()} (${weekday(dt)})`;
+
+  let html = `<h3>${dateLabel}</h3>`;
+  html += `<div class="detail-section">
+    <div class="ds-label">😊 メンタル</div>
+    <div class="ds-value"><span class="ds-emoji">${escapeHtml(emoji) || '-'}</span> ${comment ? '<div style="margin-top:6px; font-size:12px;">' + escapeHtml(comment) + '</div>' : ''}</div>
+  </div>`;
+  html += `<div class="detail-section">
+    <div class="ds-label">🍺 飲酒</div>
+    <div class="ds-value">`;
+  if (alc != null) {
+    html += `純アルコール: <strong>${alc}g</strong>`;
+    if (drinks && drinks.drinks) {
+      const ds = Object.entries(drinks.drinks).filter(([, c]) => c > 0);
+      if (ds.length > 0) {
+        html += `<div style="margin-top:4px; font-size:11px; color:#6e6e73;">${ds.map(([k, c]) => `${k} × ${c}`).join(', ')}</div>`;
+      }
+    }
+  } else {
+    html += '記録なし';
+  }
+  html += `</div></div>`;
+  html += `<div class="detail-section">
+    <div class="ds-label">💴 家計</div>
+    <div class="ds-value">`;
+  if (expEntries.length > 0) {
+    html += `支出: <strong style="color:#FF6B6B;">${fmtYen(exp)}</strong>`;
+    if (inc > 0) html += `, 収入: <strong style="color:#4DABF7;">${fmtYen(inc)}</strong>`;
+    html += `<div style="margin-top:6px; font-size:11px;">`;
+    expEntries.slice(0, 10).forEach(e => {
+      html += `<div>・${escapeHtml(e.name || '(無題)')} ${fmtYen(e.amount)}</div>`;
+    });
+    if (expEntries.length > 10) html += `<div>他 ${expEntries.length-10}件</div>`;
+    html += `</div>`;
+  } else {
+    html += '記録なし';
+  }
+  html += `</div></div>`;
+  html += `<button class="close-btn" onclick="closeDetailModal()">閉じる</button>`;
+  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailModal').classList.add('open');
+}
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('open');
+}
+
+// ========= PAT modal =========
+function openPatModal() {
+  document.getElementById('patInput').value = getPat();
+  document.getElementById('patModal').classList.add('open');
+}
+function closePatModal() {
+  document.getElementById('patModal').classList.remove('open');
+}
+function savePat() {
+  const v = document.getElementById('patInput').value.trim();
+  if (v) setPat(v);
+  closePatModal();
+  reloadAll();
+}
+
+// ========= Render dispatch =========
+function renderAll() {
+  renderCalendar();
+  renderTimeline();
+  renderAnalysis();
+}
+
+// ========= Init =========
+function init() {
+  document.getElementById('patModal').addEventListener('click', e => {
+    if (e.target.id === 'patModal') closePatModal();
+  });
+  document.getElementById('detailModal').addEventListener('click', e => {
+    if (e.target.id === 'detailModal') closeDetailModal();
+  });
+  const hasCache = loadCache();
+  if (hasCache) {
+    updateStatus(`☁️ キャッシュから表示 (${fmtFetchTime(lastFetch)})`, false);
+    renderAll();
+  }
+  if (getPat()) {
+    reloadAll();
+  } else {
+    updateStatus('⚙️ PAT未設定 → タップして設定', false);
+    document.getElementById('statusText').onclick = openPatModal;
+    if (!hasCache) {
+      setTimeout(() => openPatModal(), 300);
+    }
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+}
+
+init();
+</script>
+</body>
+</html>

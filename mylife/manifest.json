@@ -1,0 +1,11 @@
+{
+  "name": "mylife",
+  "short_name": "mylife",
+  "description": "ぽっち🌟さん専用 統合スーパーアプリ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#1d1d1f",
+  "orientation": "portrait"
+}

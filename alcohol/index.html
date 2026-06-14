@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="alcohol">
+<meta name="theme-color" content="#FF9800">
+<link rel="manifest" href="manifest.json">
+<title>alcohol</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; background: #f5f5f7; color: #1d1d1f; padding-bottom: 80px; min-height: 100vh; }
+.header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #fff; border-bottom: 1px solid #d2d2d7; position: sticky; top: 0; z-index: 10; padding-top: max(14px, env(safe-area-inset-top)); }
+.header-month { font-size: 22px; font-weight: 700; }
+.nav-btn { padding: 8px 14px; background: #f0f0f0; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; min-width: 44px; min-height: 44px; }
+.day-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 8px 4px 0; background: #fff; }
+.day-header { text-align: center; font-size: 11px; font-weight: 700; padding: 6px 2px; }
+.day-header.sun { color: #FF6B6B; }
+.day-header.sat { color: #4DABF7; }
+.day-header.weekday { color: #555; }
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 0 4px 8px; background: #fff; }
+.cell { aspect-ratio: 0.85; border: 1px solid #e5e5ea; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 4px 2px; font-size: 11px; cursor: pointer; transition: background 0.1s; user-select: none; position: relative; }
+.cell:active { background: #f0f0f0; }
+.cell.empty { color: #999; }
+.cell.today { border-color: #FF9800; border-width: 2px; }
+.cell .date-num { font-size: 12px; font-weight: 600; color: #555; margin-bottom: 2px; }
+.cell .emoji { font-size: 22px; line-height: 1; margin: 2px 0; }
+.cell .pure-g { font-size: 14px; font-weight: 700; color: #1d1d1f; }
+.cell .pure-g.dash { color: #ccc; font-weight: 400; }
+.summary { background: #fff; margin: 8px; padding: 14px 16px; border-radius: 12px; border: 1px solid #e5e5ea; }
+
+/* 週次推移ミニグラフ */
+.week-chart { background: #fff; margin: 8px; padding: 12px 14px; border-radius: 12px; border: 1px solid #e5e5ea; }
+.week-chart-title { font-size: 12px; color: #6e6e73; font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.week-chart-title .wc-sub { font-weight: 400; font-size: 11px; color: #999; }
+.week-chart-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; align-items: end; height: 84px; }
+.week-bar-col { display: flex; flex-direction: column; align-items: center; gap: 2px; height: 100%; }
+.week-bar-val { font-size: 10px; color: #6e6e73; font-weight: 600; min-height: 12px; }
+.week-bar { width: 100%; min-height: 2px; border-radius: 4px 4px 0 0; transition: height 0.3s; }
+.week-bar.b0 { background: #4CAF50; }
+.week-bar.b1 { background: #8BC34A; }
+.week-bar.b2 { background: #FFC107; }
+.week-bar.b3 { background: #FF9800; }
+.week-bar.b4 { background: #FF6B6B; }
+.week-chart-labels { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 4px; font-size: 10px; color: #999; text-align: center; }
+.week-chart-labels .today-label { color: #FF9800; font-weight: 700; }
+.week-chart-stats { display: flex; justify-content: space-around; margin-top: 8px; padding-top: 8px; border-top: 1px solid #f0f0f0; font-size: 11px; }
+.week-chart-stats .ws-item { text-align: center; }
+.week-chart-stats .ws-label { color: #999; font-size: 10px; }
+.week-chart-stats .ws-val { font-weight: 700; font-size: 13px; color: #1d1d1f; }
+.week-chart-stats .ws-val.ok { color: #4CAF50; }
+.week-chart-stats .ws-val.warn { color: #FF9800; }
+.week-chart-stats .ws-val.alert { color: #FF6B6B; }
+.summary-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.summary-row.main { font-size: 17px; padding: 4px 0 12px; border-bottom: 1px solid #f0f0f0; margin-bottom: 6px; }
+.summary-row.main .label { font-size: 14px; color: #6e6e73; }
+.summary-row.main .value { font-size: 22px; font-weight: 700; color: #FF9800; margin-left: auto; }
+.summary-row.main .target { font-size: 12px; color: #6e6e73; }
+.summary-row .emoji { font-size: 18px; }
+.summary-row .label-text { flex: 1; font-size: 13px; }
+.summary-row .count { font-size: 14px; font-weight: 700; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: flex-start; justify-content: center; z-index: 100; padding-top: max(env(safe-area-inset-top), 0px); }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; width: 100%; max-width: 500px; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+.modal-top { position: sticky; top: 0; z-index: 5; background: #fff; }
+.modal-header { background: #FF9800; color: #fff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; padding-top: max(14px, env(safe-area-inset-top)); }
+.modal-close { font-size: 24px; background: none; border: none; color: #fff; cursor: pointer; padding: 4px; min-width: 44px; }
+.modal-save { background: #fff; color: #FF9800; border: none; padding: 8px 16px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; }
+.modal-date { background: #fff; padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #f0f0f0; font-size: 17px; }
+.tab-row { display: flex; background: #fff; padding: 8px 12px; gap: 4px; border-bottom: 1px solid #f0f0f0; }
+.tab-btn { flex: 1; padding: 10px 4px; font-size: 13px; background: #fff; border: 1px solid #e5e5ea; border-radius: 8px; cursor: pointer; font-weight: 500; color: #1d1d1f; }
+.tab-btn.active { background: #FF9800; color: #fff; border-color: #FF9800; }
+.tab-btn.danger.active { background: #FF6B6B; border-color: #FF6B6B; }
+.action-row { display: flex; background: #fff; padding: 8px 12px; gap: 4px; border-bottom: 1px solid #f0f0f0; }
+.action-btn { flex: 1; padding: 10px 4px; font-size: 13px; background: #fff; border: 1px solid #e5e5ea; border-radius: 8px; cursor: pointer; font-weight: 500; }
+.action-btn.active { background: #FF9800; color: #fff; border-color: #FF9800; }
+.action-btn.delete { color: #FF6B6B; }
+.cat-tab-row { display: flex; overflow-x: auto; background: #fff; padding: 8px; gap: 6px; border-bottom: 1px solid #f0f0f0; -webkit-overflow-scrolling: touch; }
+.cat-tab-row::-webkit-scrollbar { display: none; }
+.cat-tab { flex: 0 0 auto; min-width: 64px; padding: 6px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: #fff; border: 1px solid #e5e5ea; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 500; user-select: none; }
+.cat-tab.active { background: #fff3e0; border-color: #FF9800; }
+.cat-tab .cat-icon { font-size: 22px; line-height: 1; }
+.cat-help { padding: 6px 12px; font-size: 11px; color: #6e6e73; text-align: center; }
+.preset-list { background: #fff; }
+.preset-item { display: flex; align-items: center; padding: 12px 12px; border-bottom: 1px solid #f0f0f0; gap: 8px; }
+.preset-item .del-btn { width: 28px; height: 28px; border-radius: 50%; background: #FF6B6B; color: #fff; border: none; font-size: 18px; font-weight: 700; cursor: pointer; flex-shrink: 0; line-height: 1; padding-bottom: 2px; }
+.preset-info { flex: 1; min-width: 0; }
+.preset-name { font-size: 14px; font-weight: 500; }
+.preset-detail { font-size: 12px; color: #6e6e73; margin-top: 2px; }
+.preset-counter { display: flex; align-items: center; gap: 0; }
+.preset-counter .count-display { font-size: 18px; font-weight: 700; min-width: 32px; text-align: center; }
+.counter-buttons { display: flex; background: #f0f0f0; border-radius: 8px; overflow: hidden; }
+.counter-btn { width: 36px; height: 36px; background: transparent; border: none; font-size: 18px; cursor: pointer; color: #1d1d1f; font-weight: 500; }
+.counter-btn:active { background: #d2d2d7; }
+.add-preset-btn { background: #fff; padding: 16px; text-align: center; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 28px; color: #6e6e73; font-weight: 300; }
+.add-preset-btn:active { background: #f0f0f0; }
+.modal-footer-space { height: 40px; }
+.toolbar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #d2d2d7; padding: 10px 12px; display: flex; gap: 8px; padding-bottom: max(10px, env(safe-area-inset-bottom)); z-index: 5; }
+.toolbar-btn { flex: 1; padding: 12px 4px; background: #f5f5f7; border: 1px solid #d2d2d7; border-radius: 10px; font-size: 13px; cursor: pointer; min-height: 44px; }
+
+.input-modal { background: #fff; border-radius: 14px; padding: 20px; width: 100%; max-width: 380px; }
+.input-modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 12px; text-align: center; }
+.input-modal .field { margin-bottom: 12px; }
+.input-modal label { display: block; font-size: 12px; color: #6e6e73; margin-bottom: 4px; }
+.input-modal input, .input-modal select { width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 16px; font-family: inherit; }
+.input-modal .actions { display: flex; gap: 8px; margin-top: 14px; }
+.input-modal .actions button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; min-height: 44px; }
+.input-modal .actions .btn-primary { background: #FF9800; color: #fff; }
+.input-modal .actions .btn-secondary { background: #f0f0f0; color: #1d1d1f; }
+.input-modal .calc-preview { font-size: 12px; color: #FF9800; margin-top: 2px; text-align: right; }
+
+.simple-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+.simple-overlay.open { display: flex; }
+</style>
+</head>
+<body>
+<div class="header">
+  <button class="nav-btn" onclick="navMonth(-1)">←</button>
+  <div class="header-month" id="currentMonthLabel"></div>
+  <button class="nav-btn" onclick="navMonth(1)">→</button>
+</div>
+
+<div class="day-headers">
+  <div class="day-header sun">日</div>
+  <div class="day-header weekday">月</div>
+  <div class="day-header weekday">火</div>
+  <div class="day-header weekday">水</div>
+  <div class="day-header weekday">木</div>
+  <div class="day-header weekday">金</div>
+  <div class="day-header sat">土</div>
+</div>
+
+<div class="grid" id="mainGrid"></div>
+
+<div class="week-chart" id="weekChart"></div>
+
+<div class="summary" id="summary"></div>
+
+<!-- Day Edit Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-top">
+      <div class="modal-header">
+        <button class="modal-close" onclick="closeModal()">✕</button>
+        <div></div>
+        <button class="modal-save" onclick="saveDay()">保存</button>
+      </div>
+      <div class="modal-date" id="modalDate">📅 2026年5月30日</div>
+      <div class="action-row" id="actionRow"></div>
+      <div class="cat-tab-row" id="categoryTabs"></div>
+    </div>
+    <div class="cat-help" id="catHelpText"></div>
+    <div class="preset-list" id="presetList"></div>
+    <div class="add-preset-btn" id="addPresetBtn" onclick="openCustomInput()">+</div>
+    <div class="modal-footer-space"></div>
+  </div>
+</div>
+
+<!-- Custom Preset Input Modal -->
+<div class="simple-overlay" id="customInput" onclick="if(event.target===this)closeCustomInput()">
+  <div class="input-modal">
+    <h3>カスタム飲み物を追加</h3>
+    <div class="field">
+      <label>名前</label>
+      <input id="ci_name" type="text" placeholder="例: 白瓶ワイン" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>容量 (ml)</label>
+      <input id="ci_volume" type="number" inputmode="decimal" placeholder="例: 250" step="any">
+    </div>
+    <div class="field">
+      <label>アルコール度数 (%)</label>
+      <input id="ci_alc" type="number" inputmode="decimal" placeholder="例: 12.5" step="0.1">
+      <div class="calc-preview" id="ci_preview">純アルコール量: -</div>
+    </div>
+    <div class="field">
+      <label>カテゴリ</label>
+      <select id="ci_category">
+        <option value="custom">カスタム</option>
+        <option value="beer">ビール</option>
+        <option value="highball">ハイボール</option>
+        <option value="chuhai">チューハイ</option>
+        <option value="wine">ワイン</option>
+        <option value="sake">日本酒</option>
+      </select>
+    </div>
+    <div class="actions">
+      <button class="btn-secondary" onclick="closeCustomInput()">キャンセル</button>
+      <button class="btn-primary" onclick="addCustomPreset()">追加</button>
+    </div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="toolbar-btn" onclick="exportJSON()">📤 Export</button>
+  <button class="toolbar-btn" onclick="importJSON()">📥 Import</button>
+  <button class="toolbar-btn" id="syncStatusBtn" style="flex:0 0 auto; min-width:90px;">⚙️ 未設定</button>
+</div>
+
+<script src="sync.js"></script>
+<script>
+// ===== 定数 =====
+const CATEGORIES = [
+  { id: 'custom', name: 'カスタム', icon: '❤️' },
+  { id: 'beer', name: 'ビール', icon: '🍺' },
+  { id: 'highball', name: 'ハイボール', icon: '🥃' },
+  { id: 'chuhai', name: 'チューハイ', icon: '🍹' },
+  { id: 'wine', name: 'ワイン', icon: '🍸' },
+  { id: 'sake', name: '日本酒', icon: '🍶' },
+];
+
+// 純アルコール量(g) = ml × Alc%/100 × 0.8 (アルコール比重)
+const calcPureAlc = (ml, pct) => ml * pct / 100 * 0.8;
+
+// 標準プリセット(seed) — ぽっち🌟さん旧アプリの構成に準拠
+function P(category, name, volume_ml, alc_pct, order) {
+  const pure_alc_g = calcPureAlc(volume_ml, alc_pct);
+  return { category, name, volume_ml, alc_pct, pure_alc_g: Math.round(pure_alc_g * 10) / 10, order, deletable: false };
+}
+const DEFAULT_PRESETS = {
+  // ビール
+  'beer_chu_jockey_5': P('beer', '中ジョッキ (Alc 5%)', 390, 5.0, 1),
+  'beer_can350_5': P('beer', '350ml缶 (Alc 5%)', 350, 5.0, 2),
+  'beer_can350_4': P('beer', '350ml缶 (Alc 4%)', 350, 4.0, 3),
+  'beer_can500_5': P('beer', '500ml缶 (Alc 5%)', 500, 5.0, 4),
+  'beer_can500_4': P('beer', '500ml缶 (Alc 4%)', 500, 4.0, 5),
+  'beer_naka_bin_5': P('beer', '中びん (Alc 5%) 1本 500ml', 500, 5.0, 6),
+  'beer_oo_bin_5': P('beer', '大びん (Alc 5%) 1本 633ml', 633, 5.0, 7),
+  'beer_glass_5': P('beer', 'グラス (Alc 5%) 180ml', 180, 5.0, 8),
+  'beer_micro_5': P('beer', '微アル 350ml缶 (Alc 0.5%)', 350, 0.5, 9),
+  'beer_12oz_5': P('beer', '12オンス缶 (Alc 5%)', 350, 5.0, 10),
+  'beer_16oz_5': P('beer', '16オンス トールボーイ缶 (Alc 5%)', 470, 5.0, 11),
+  // ハイボール
+  'highball_can350_4': P('highball', '350ml缶 (Alc 4%)', 350, 4.0, 1),
+  'highball_can350_5': P('highball', '350ml缶 (Alc 5%)', 350, 5.0, 2),
+  'highball_can350_7': P('highball', '350ml缶 (Alc 7%)', 350, 7.0, 3),
+  'highball_can350_9': P('highball', '350ml缶 (Alc 9%)', 350, 9.0, 4),
+  'highball_can500_4': P('highball', '500ml缶 (Alc 4%)', 500, 4.0, 5),
+  'highball_can500_5': P('highball', '500ml缶 (Alc 5%)', 500, 5.0, 6),
+  'highball_can500_7': P('highball', '500ml缶 (Alc 7%)', 500, 7.0, 7),
+  'highball_can500_9': P('highball', '500ml缶 (Alc 9%)', 500, 9.0, 8),
+  'highball_chu_jockey_7': P('highball', '中ジョッキ (Alc 7%)', 390, 7.0, 9),
+  'highball_micro_5': P('highball', '微アル 350ml缶 (Alc 0.5%)', 350, 0.5, 10),
+  // チューハイ
+  'chuhai_can350_4': P('chuhai', '350ml缶 (Alc 4%)', 350, 4.0, 1),
+  'chuhai_can350_5': P('chuhai', '350ml缶 (Alc 5%)', 350, 5.0, 2),
+  'chuhai_can350_7': P('chuhai', '350ml缶 (Alc 7%)', 350, 7.0, 3),
+  'chuhai_can350_9': P('chuhai', '350ml缶 (Alc 9%)', 350, 9.0, 4),
+  'chuhai_can500_4': P('chuhai', '500ml缶 (Alc 4%)', 500, 4.0, 5),
+  'chuhai_can500_5': P('chuhai', '500ml缶 (Alc 5%)', 500, 5.0, 6),
+  'chuhai_can500_7': P('chuhai', '500ml缶 (Alc 7%)', 500, 7.0, 7),
+  'chuhai_can500_9': P('chuhai', '500ml缶 (Alc 9%)', 500, 9.0, 8),
+  'chuhai_chu_jockey_7': P('chuhai', '中ジョッキ (Alc 7%)', 390, 7.0, 9),
+  'chuhai_micro_5': P('chuhai', '微アル 350ml缶 (Alc 0.5%)', 350, 0.5, 10),
+  // ワイン
+  'wine_glass120_12': P('wine', '1杯 120ml (Alc 12%)', 120, 12.0, 1),
+  'wine_bottle750_12': P('wine', '1本 750ml (Alc 12%)', 750, 12.0, 2),
+  'wine_glass150_13': P('wine', '5オンス グラス 150ml (Alc 13%)', 150, 13.0, 3),
+  // 日本酒
+  'sake_go_180_15': P('sake', '1合 180ml (Alc 15%)', 180, 15.0, 1),
+  'sake_ochoko_30_15': P('sake', 'おちょこ 1杯 30ml (Alc 15%)', 30, 15.0, 2),
+  // ===== ぽっち🌟さん旧アプリのカスタム23種(各カテゴリに振り分け、削除可) =====
+  // ビール(8種)
+  'pocchi_beer_1pine_580_5':   P_('beer', 'ビール 1パイン 580ml (Alc 5%)', 580, 5.0, 101),
+  'pocchi_beer_small_200_5':   P_('beer', 'ビール小 200ml (Alc 5%)', 200, 5.0, 102),
+  'pocchi_beer_350_65':        P_('beer', 'ビール 350ml (Alc 6.5%)', 350, 6.5, 103),
+  'pocchi_beer_350_6':         P_('beer', 'ビール 350ml (Alc 6%)', 350, 6.0, 104),
+  'pocchi_beer_half_250_5':    P_('beer', '半ビール 250ml (Alc 5%)', 250, 5.0, 105),
+  'pocchi_beer_330_45':        P_('beer', 'ビール 330ml (Alc 4.5%)', 330, 4.5, 106),
+  'pocchi_beer_350_45':        P_('beer', 'ビール 350ml (Alc 4.5%)', 350, 4.5, 107),
+  'pocchi_beer_bin334_5':      P_('beer', 'ビール瓶 334ml (Alc 5%)', 334, 5.0, 108),
+  // ハイボール(4種)
+  'pocchi_hb_half_250_7':      P_('highball', '半ハイボール 250ml (Alc 7%)', 250, 7.0, 101),
+  'pocchi_hb_400strong_9':     P_('highball', '400ハイボール強 400ml (Alc 9%)', 400, 9.0, 102),
+  'pocchi_hb_can8_350':        P_('highball', '缶ハイボ8 350ml (Alc 8%)', 350, 8.0, 103),
+  'pocchi_hb_can8_500':        P_('highball', '缶ハイボ8 500ml (Alc 8%)', 500, 8.0, 104),
+  // チューハイ(4種)
+  'pocchi_ch_350_6':           P_('chuhai', 'チューハイ 350ml (Alc 6%)', 350, 6.0, 101),
+  'pocchi_ch_350_3':           P_('chuhai', 'チューハイ 350ml (Alc 3%)', 350, 3.0, 102),
+  'pocchi_ch_400_7':           P_('chuhai', 'チューハイ 400ml (Alc 7%)', 400, 7.0, 103),
+  'pocchi_ch_500_6':           P_('chuhai', 'チューハイ 500ml (Alc 6%)', 500, 6.0, 104),
+  // ワイン(7種)
+  'pocchi_wine_seven_290_12':  P_('wine', 'セブンワイン 290ml (Alc 12%)', 290, 12.0, 101),
+  'pocchi_wine_white_250_125': P_('wine', '白瓶ワイン 250ml (Alc 12.5%)', 250, 12.5, 102),
+  'pocchi_wine_05_60_12':      P_('wine', 'ワイン 0.5 60ml (Alc 12%)', 60, 12.0, 103),
+  'pocchi_wine_can_290_85':    P_('wine', '缶ワイン 290ml (Alc 8.5%)', 290, 8.5, 104),
+  'pocchi_wine_can_250_105':   P_('wine', '缶ワイン 250ml (Alc 10.5%)', 250, 10.5, 105),
+  'pocchi_wine_bin_small_200': P_('wine', '瓶小ワイン 200ml (Alc 12%)', 200, 12.0, 106),
+  'pocchi_wine_half_375_12':   P_('wine', 'ワインハーフ 375ml (Alc 12%)', 375, 12.0, 107),
+};
+
+// 削除可フラグ付きの定義ヘルパ(ぽっち🌟さんプリセット用)
+// 関数宣言形式なので DEFAULT_PRESETS 内で hoisting により利用可能
+function P_(category, name, volume_ml, alc_pct, order) {
+  const pure_alc_g = calcPureAlc(volume_ml, alc_pct);
+  return { category, name, volume_ml, alc_pct, pure_alc_g: Math.round(pure_alc_g * 10) / 10, order, deletable: true };
+}
+
+// 月集計の閾値 (g/日)
+const TH = { rest: 0, moderate: 20, mild: 40, heavy: 60 };
+
+// セル色分け
+function classifyDay(g) {
+  if (g === 0 || g == null) return { label: 'rest', emoji: '♥️', bg: '#fff' };
+  if (g <= TH.moderate) return { label: 'moderate', emoji: '😊', bg: '#fff8e1' };
+  if (g <= TH.mild) return { label: 'mild', emoji: '😞', bg: '#ffe0b2' };
+  if (g <= TH.heavy) return { label: 'heavy', emoji: '😟', bg: '#ffccbc' };
+  return { label: 'danger', emoji: '💀', bg: '#ffcdd2' };
+}
+
+// 月目標
+const MONTHLY_TARGET_G = 420;
+const REST_TARGET = 10;
+
+// ===== 状態 =====
+let currentDate = new Date();
+let editingDate = null;
+let editingState = null; // { status, condition, drinkCounts: {preset_id: count} }
+let activeCategory = 'beer';
+
+// state: { data: {date: dayEntry}, customPresets: {id: preset} }
+function loadState() {
+  const s = JSON.parse(localStorage.getItem('alcohol_data') || '{}');
+  if (!s.data) s.data = {};
+  if (!s.customPresets) s.customPresets = {};
+  return s;
+}
+let state = loadState();
+
+const sync = new GitHubSync({
+  appName: 'alcohol',
+  repoOwner: 'ttyf27',
+  repoName: 'mylife',
+  filePath: 'data/pwa/alcohol.json',
+  branch: 'claude/garmin-data-analysis-V2xrD',
+  getData: () => JSON.parse(localStorage.getItem('alcohol_data') || '{}'),
+});
+
+function recomputeDailyPureG() {
+  state.dailyPureG = {};
+  for (const date in state.data) {
+    const total = dayTotalG(state.data[date]);
+    if (total != null) state.dailyPureG[date] = total;
+  }
+}
+function saveState() {
+  recomputeDailyPureG();
+  localStorage.setItem('alcohol_data', JSON.stringify(state));
+  sync.markDirtyAndPush();
+}
+
+// All presets = default + custom
+function allPresets() {
+  return { ...DEFAULT_PRESETS, ...state.customPresets };
+}
+
+function pad(n) { return n.toString().padStart(2, '0'); }
+function ymd(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+
+// 日のentry → 純アル総量計算
+function dayTotalG(entry) {
+  if (!entry || entry.status !== 'drank') return entry?.status === 'no_drink' ? 0 : null;
+  let total = 0;
+  const presets = allPresets();
+  for (const [pid, count] of Object.entries(entry.drinks || {})) {
+    if (count > 0 && presets[pid]) total += presets[pid].pure_alc_g * count;
+  }
+  return Math.round(total * 10) / 10;
+}
+
+// ===== カレンダー描画 =====
+function render() {
+  const m = currentDate.getMonth() + 1;
+  const y = currentDate.getFullYear();
+  document.getElementById('currentMonthLabel').textContent = `${y}年${pad(m)}月`;
+
+  const grid = document.getElementById('mainGrid');
+  grid.innerHTML = '';
+  const firstDay = new Date(y, m-1, 1);
+  const lastDay = new Date(y, m, 0);
+  const daysInMonth = lastDay.getDate();
+  const startDow = firstDay.getDay();
+  const todayStr = ymd(new Date());
+
+  for (let i = 0; i < startDow; i++) grid.appendChild(document.createElement('div'));
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = ymd(new Date(y, m-1, d));
+    const entry = state.data[dateStr];
+    const total = dayTotalG(entry);
+    const cls = total != null ? classifyDay(total) : null;
+    const cell = document.createElement('div');
+    cell.className = 'cell' + (entry ? '' : ' empty') + (dateStr === todayStr ? ' today' : '');
+    if (cls) cell.style.background = cls.bg;
+    cell.innerHTML = `
+      <div class="date-num">${d}</div>
+      <div class="emoji">${cls ? cls.emoji : ''}</div>
+      <div class="pure-g ${total==null?'dash':''}">${total != null ? total : '-'}</div>
+    `;
+    cell.onclick = () => openModal(dateStr);
+    grid.appendChild(cell);
+  }
+  renderWeekChart();
+  renderSummary();
+}
+
+function dayTotalCups(entry) {
+  if (!entry || entry.status !== 'drank') return entry?.status === 'no_drink' ? 0 : null;
+  let total = 0;
+  for (const [pid, count] of Object.entries(entry.drinks || {})) {
+    if (count > 0) total += count;
+  }
+  return total;
+}
+
+function monthlyTotalsFor(y, m) {
+  const prefix = `${y}-${pad(m)}`;
+  let cups = 0, grams = 0, has = false;
+  for (const [d, e] of Object.entries(state.data)) {
+    if (!d.startsWith(prefix)) continue;
+    const c = dayTotalCups(e);
+    const g = dayTotalG(e);
+    if (c != null) { cups += c; has = true; }
+    if (g != null) { grams += g; }
+  }
+  return { cups, grams, has };
+}
+
+// 今日を基点に過去N日の移動平均 (記録ある日のみ集計、休肝日(0g)も含む)
+function rollingAverage(days) {
+  const today = new Date();
+  let sumG = 0, sumCups = 0, n = 0;
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const entry = state.data[ymd(d)];
+    if (!entry) continue;
+    const g = dayTotalG(entry);
+    const c = dayTotalCups(entry);
+    if (g == null) continue;
+    sumG += g;
+    sumCups += c || 0;
+    n++;
+  }
+  return { sumG, sumCups, n, avgG: n ? sumG/n : 0, avgCups: n ? sumCups/n : 0 };
+}
+
+// 過去7日間の純アル/日 ミニ棒グラフ
+function renderWeekChart() {
+  const el = document.getElementById('weekChart');
+  if (!el) return;
+  const today = new Date();
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const ds = ymd(d);
+    const entry = state.data[ds];
+    const total = dayTotalG(entry);
+    days.push({
+      date: d,
+      ds,
+      g: total != null ? total : null,
+      isToday: i === 0,
+    });
+  }
+  // 色分け基準 (g)
+  function colorClass(g) {
+    if (g == null) return '';
+    if (g === 0) return 'b0';
+    if (g < 20) return 'b1';
+    if (g < 40) return 'b2';
+    if (g < 60) return 'b3';
+    return 'b4';
+  }
+  const validG = days.filter(x => x.g != null).map(x => x.g);
+  const maxG = Math.max(...validG, 40); // 最低40gスケール
+  const recordedDays = validG.length;
+  const restDays = validG.filter(g => g === 0).length;
+  const avg7 = recordedDays > 0 ? validG.reduce((a,b)=>a+b,0) / recordedDays : 0;
+  let avgClass = 'ok';
+  if (avg7 >= 40) avgClass = 'alert';
+  else if (avg7 >= 20) avgClass = 'warn';
+
+  const bars = days.map(d => {
+    const h = d.g == null ? 0 : Math.max(2, (d.g / maxG) * 70);
+    const cls = colorClass(d.g);
+    const valTxt = d.g == null ? '—' : (d.g === 0 ? '0' : Math.round(d.g));
+    return `<div class="week-bar-col">
+      <div class="week-bar-val">${valTxt}</div>
+      <div class="week-bar ${cls}" style="height:${h}px"></div>
+    </div>`;
+  }).join('');
+
+  const labels = days.map(d => {
+    const md = `${d.date.getMonth()+1}/${d.date.getDate()}`;
+    return `<div class="${d.isToday ? 'today-label' : ''}">${md}</div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="week-chart-title">
+      <span>📊 直近7日 (純アル g/日)</span>
+      <span class="wc-sub">${recordedDays}/7日記録</span>
+    </div>
+    <div class="week-chart-bars">${bars}</div>
+    <div class="week-chart-labels">${labels}</div>
+    <div class="week-chart-stats">
+      <div class="ws-item"><div class="ws-label">休肝日</div><div class="ws-val ok">${restDays}日</div></div>
+      <div class="ws-item"><div class="ws-label">7日平均</div><div class="ws-val ${avgClass}">${Math.round(avg7*10)/10}g</div></div>
+      <div class="ws-item"><div class="ws-label">合計</div><div class="ws-val">${Math.round(validG.reduce((a,b)=>a+b,0))}g</div></div>
+    </div>
+  `;
+}
+
+function renderSummary() {
+  const m = currentDate.getMonth() + 1;
+  const y = currentDate.getFullYear();
+  const prefix = `${y}-${pad(m)}`;
+  const entries = Object.entries(state.data).filter(([d]) => d.startsWith(prefix));
+  let total = 0, restDays = 0, modDays = 0, mildDays = 0, heavyDays = 0, dangerDays = 0, totalCups = 0;
+  for (const [, e] of entries) {
+    const g = dayTotalG(e);
+    if (g == null) continue;
+    if (g === 0) restDays++;
+    else {
+      total += g;
+      const c = classifyDay(g);
+      if (c.label === 'moderate') modDays++;
+      else if (c.label === 'mild') mildDays++;
+      else if (c.label === 'heavy') heavyDays++;
+      else if (c.label === 'danger') dangerDays++;
+    }
+    const cups = dayTotalCups(e);
+    if (cups != null) totalCups += cups;
+  }
+  total = Math.round(total * 10) / 10;
+  totalCups = Math.round(totalCups * 10) / 10;
+  const overTarget = total > MONTHLY_TARGET_G;
+  const restClass = restDays >= REST_TARGET ? '✅' : '';
+
+  // 直近3ヶ月の月平均 (今月含む3ヶ月、記録ある月のみ)
+  const histCups = [], histG = [];
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(y, m - 1 - i, 1);
+    const r = monthlyTotalsFor(d.getFullYear(), d.getMonth() + 1);
+    if (r.has) { histCups.push(r.cups); histG.push(r.grams); }
+  }
+  const ma3Cups = histCups.length > 0 ? Math.round((histCups.reduce((a,b)=>a+b,0)/histCups.length)*10)/10 : 0;
+  const ma3G = histG.length > 0 ? Math.round((histG.reduce((a,b)=>a+b,0)/histG.length)*10)/10 : 0;
+  const ma3Months = histCups.length;
+
+  // 今日基点の30日移動平均 (休肝日を入れると毎日減るモチベ指標)
+  const ma30 = rollingAverage(30);
+  const ma30_avgG = Math.round(ma30.avgG * 10) / 10;
+  const ma30_avgCups = Math.round(ma30.avgCups * 10) / 10;
+  const ma30_monthlyG = Math.round(ma30.avgG * 30);
+  const ma30_clr = ma30_monthlyG > MONTHLY_TARGET_G ? '#FF6B6B' : '#4CAF50';
+
+  document.getElementById('summary').innerHTML = `
+    <div class="summary-row main">
+      <div>
+        <div class="label">🍺 今月の純アルコール量</div>
+        <div class="target">目標: ${MONTHLY_TARGET_G}g 以内</div>
+      </div>
+      <div class="value" style="color:${overTarget?'#FF6B6B':'#FF9800'}">${total}g</div>
+    </div>
+    <div class="summary-row"><span class="emoji">♥️</span><span class="label-text">休肝日 (目標${REST_TARGET}日) ${restClass}</span><span class="count">${restDays}日</span></div>
+    <div class="summary-row"><span class="emoji">😊</span><span class="label-text">適量 (1-${TH.moderate}g)</span><span class="count">${modDays}日</span></div>
+    <div class="summary-row"><span class="emoji">😞</span><span class="label-text">やや飲み過ぎ (${TH.moderate}-${TH.mild}g)</span><span class="count">${mildDays}日</span></div>
+    <div class="summary-row"><span class="emoji">😟</span><span class="label-text">飲み過ぎ (${TH.mild}-${TH.heavy}g)</span><span class="count">${heavyDays}日</span></div>
+    <div class="summary-row"><span class="emoji">💀</span><span class="label-text">危険 (${TH.heavy}g+)</span><span class="count">${dangerDays}日</span></div>
+    <div class="summary-row" style="border-top:1px solid #f0f0f0; padding-top:8px; margin-top:4px;"><span class="emoji">🍶</span><span class="label-text">今月の総杯数</span><span class="count">${totalCups}杯</span></div>
+    ${ma3Months >= 2 ? `<div class="summary-row"><span class="emoji">📊</span><span class="label-text">直近${ma3Months}ヶ月 月平均 (杯)</span><span class="count">${ma3Cups}杯</span></div>
+    <div class="summary-row"><span class="emoji">📊</span><span class="label-text">直近${ma3Months}ヶ月 月平均 (g)</span><span class="count">${ma3G}g</span></div>` : ''}
+    <div class="summary-row" style="border-top:1px solid #f0f0f0; padding-top:8px; margin-top:4px;"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (g/日)</span><span class="count" style="color:${ma30_clr}">${ma30_avgG}g</span></div>
+    <div class="summary-row"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (杯/日)</span><span class="count">${ma30_avgCups}杯</span></div>
+    <div class="summary-row"><span class="emoji">🔮</span><span class="label-text">月換算 (30日MA × 30)</span><span class="count" style="color:${ma30_clr}">${ma30_monthlyG}g</span></div>
+    <div class="summary-row" style="font-size:11px; color:#999; padding-top:0;"><span class="emoji" style="visibility:hidden">.</span><span class="label-text">記録日数: ${ma30.n}/30日</span><span class="count" style="font-weight:normal; color:#999;"></span></div>
+  `;
+}
+
+function navMonth(delta) {
+  currentDate.setMonth(currentDate.getMonth() + delta);
+  render();
+}
+
+// ===== 日次入力モーダル =====
+function openModal(dateStr) {
+  editingDate = dateStr;
+  const entry = state.data[dateStr] || { status: 'drank', condition: 'normal', drinks: {} };
+  editingState = {
+    status: entry.status || 'drank',
+    condition: entry.condition || 'normal',
+    drinks: { ...(entry.drinks || {}) },
+  };
+  activeCategory = 'beer';
+
+  const [y, mo, d] = dateStr.split('-');
+  document.getElementById('modalDate').textContent = `📅 ${y}年${parseInt(mo)}月${parseInt(d)}日`;
+
+  renderModal();
+  document.getElementById('modal').classList.add('open');
+}
+
+function renderModal() {
+  // 状態は常にnormal固定 (UI削除済み)
+  editingState.condition = 'normal';
+
+  // 飲酒した/してない/削除
+  const actions = `
+    <button class="action-btn ${editingState.status==='drank'?'active':''}" onclick="setStatus('drank')">飲酒した</button>
+    <button class="action-btn ${editingState.status==='no_drink'?'active':''}" onclick="setStatus('no_drink')">飲酒してない</button>
+    <button class="action-btn delete" onclick="deleteEntry()">削除</button>
+  `;
+  document.getElementById('actionRow').innerHTML = actions;
+
+  // カテゴリタブ
+  document.getElementById('categoryTabs').innerHTML = CATEGORIES.map(c =>
+    `<div class="cat-tab ${activeCategory===c.id?'active':''}" onclick="setCategory('${c.id}')">
+      <div class="cat-icon">${c.icon}</div>
+      <div>${c.name}</div>
+    </div>`
+  ).join('');
+
+  // ヘルプテキスト
+  document.getElementById('catHelpText').textContent =
+    activeCategory === 'custom' ? '左端の − で削除' : '';
+
+  // プリセット一覧
+  renderPresetList();
+}
+
+function renderPresetList() {
+  const presets = allPresets();
+  const items = Object.entries(presets)
+    .filter(([, p]) => p.category === activeCategory)
+    .sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
+
+  const list = document.getElementById('presetList');
+  list.innerHTML = items.map(([id, p]) => {
+    const count = editingState.drinks[id] || 0;
+    const showDelBtn = p.deletable || activeCategory === 'custom';
+    return `<div class="preset-item">
+      ${showDelBtn ? `<button class="del-btn" onclick="deletePreset('${id}')">−</button>` : ''}
+      <div class="preset-info">
+        <div class="preset-name">${escapeHtml(p.name)}</div>
+        <div class="preset-detail">${p.volume_ml}ml(ALC.${p.alc_pct}%) 純アル:${p.pure_alc_g}g</div>
+      </div>
+      <div class="preset-counter">
+        <div class="count-display">${count}</div>
+        <div class="counter-buttons">
+          <button class="counter-btn" onclick="adjustCount('${id}',-1)">−</button>
+          <button class="counter-btn" onclick="adjustCount('${id}',1)">＋</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="padding:30px 16px;text-align:center;color:#999;font-size:13px;">プリセットなし。下の「+」で追加してください。</div>';
+
+  // 「+」ボタン表示制御 (カスタムタブのみ)
+  document.getElementById('addPresetBtn').style.display = activeCategory === 'custom' ? 'block' : 'none';
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function setCondition(id) { editingState.condition = id; renderModal(); }
+function setStatus(s) { editingState.status = s; if (s === 'no_drink') editingState.drinks = {}; renderModal(); }
+function setCategory(id) { activeCategory = id; renderModal(); }
+
+function adjustCount(presetId, delta) {
+  const cur = editingState.drinks[presetId] || 0;
+  const next = Math.max(0, cur + delta);
+  if (next === 0) delete editingState.drinks[presetId];
+  else editingState.drinks[presetId] = next;
+  // 飲酒したに自動切替
+  if (next > 0) editingState.status = 'drank';
+  renderModal();
+}
+
+function deletePreset(presetId) {
+  if (!confirm('このカスタムプリセットを削除しますか?(過去日の記録は残ります)')) return;
+  delete state.customPresets[presetId];
+  saveState();
+  renderPresetList();
+}
+
+function deleteEntry() {
+  if (!confirm('この日の記録を全部削除しますか?')) return;
+  delete state.data[editingDate];
+  saveState();
+  closeModal();
+  render();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function saveDay() {
+  const total = (() => {
+    if (editingState.status === 'no_drink') return 0;
+    let t = 0; const ps = allPresets();
+    for (const [id, c] of Object.entries(editingState.drinks)) {
+      if (c > 0 && ps[id]) t += ps[id].pure_alc_g * c;
+    }
+    return Math.round(t * 10) / 10;
+  })();
+  state.data[editingDate] = {
+    status: editingState.status,
+    condition: editingState.condition,
+    drinks: editingState.drinks,
+    total_pure_alc_g: total,
+  };
+  saveState();
+  closeModal();
+  render();
+}
+
+// ===== カスタムプリセット追加 =====
+function openCustomInput() {
+  document.getElementById('ci_name').value = '';
+  document.getElementById('ci_volume').value = '';
+  document.getElementById('ci_alc').value = '';
+  document.getElementById('ci_category').value = activeCategory === 'custom' ? 'custom' : activeCategory;
+  updateCalcPreview();
+  document.getElementById('customInput').classList.add('open');
+  setTimeout(()=>document.getElementById('ci_name').focus(), 100);
+}
+
+function closeCustomInput() {
+  document.getElementById('customInput').classList.remove('open');
+}
+
+function updateCalcPreview() {
+  const ml = parseFloat(document.getElementById('ci_volume').value);
+  const pct = parseFloat(document.getElementById('ci_alc').value);
+  const el = document.getElementById('ci_preview');
+  if (isFinite(ml) && isFinite(pct) && ml > 0 && pct > 0) {
+    el.textContent = `純アルコール量: ${Math.round(calcPureAlc(ml, pct) * 10) / 10}g`;
+  } else {
+    el.textContent = '純アルコール量: -';
+  }
+}
+
+['ci_volume','ci_alc'].forEach(id =>
+  document.addEventListener('input', e => { if (e.target.id === id) updateCalcPreview(); })
+);
+
+function addCustomPreset() {
+  const name = document.getElementById('ci_name').value.trim();
+  const volume_ml = parseFloat(document.getElementById('ci_volume').value);
+  const alc_pct = parseFloat(document.getElementById('ci_alc').value);
+  const category = document.getElementById('ci_category').value;
+  if (!name || !isFinite(volume_ml) || volume_ml <= 0 || !isFinite(alc_pct) || alc_pct < 0) {
+    alert('全項目を正しく入力してください'); return;
+  }
+  const id = 'custom_' + Date.now();
+  // order: 同カテゴリの最大+1
+  const maxOrder = Object.values(allPresets()).filter(p => p.category === category).reduce((m, p) => Math.max(m, p.order || 0), 0);
+  state.customPresets[id] = {
+    category, name, volume_ml, alc_pct,
+    pure_alc_g: Math.round(calcPureAlc(volume_ml, alc_pct) * 10) / 10,
+    order: maxOrder + 1, deletable: true,
+  };
+  saveState();
+  closeCustomInput();
+  if (category === activeCategory || activeCategory === 'custom') {
+    activeCategory = category;
+    renderModal();
+  }
+}
+
+// ===== Export/Import =====
+function exportJSON() {
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `alcohol_${ymd(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        const dCount = Object.keys(imported.data || {}).length;
+        const pCount = Object.keys(imported.customPresets || {}).length;
+        if (!confirm(`記録${dCount}日 + カスタムプリセット${pCount}件を取り込みます(既存に統合、新が優先)`)) return;
+        state.data = { ...state.data, ...(imported.data || {}) };
+        state.customPresets = { ...state.customPresets, ...(imported.customPresets || {}) };
+        saveState();
+        render();
+        alert('取り込み完了');
+      } catch (err) {
+        alert('JSONエラー: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ===== Init =====
+render();
+sync.attachStatusElement(document.getElementById('syncStatusBtn'));
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

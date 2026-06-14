@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="gokigen">
+<meta name="theme-color" content="#34D399">
+<link rel="manifest" href="manifest.json">
+<title>gokigen</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; background: #f5f5f7; color: #1d1d1f; padding-bottom: 90px; min-height: 100vh; }
+.header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #fff; border-bottom: 1px solid #d2d2d7; position: sticky; top: 0; z-index: 10; padding-top: max(14px, env(safe-area-inset-top)); }
+.header-month { font-size: 22px; font-weight: 700; }
+.nav-btn { padding: 8px 14px; background: #f0f0f0; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; min-width: 44px; min-height: 44px; }
+.mini-months { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 16px; background: #fff; }
+.mini-month { background: #f8f8fa; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+.mini-month-label { font-size: 11px; color: #6e6e73; margin-bottom: 4px; text-align: center; font-weight: 600; }
+.mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mini-cell { aspect-ratio: 1; border-radius: 50%; background: #e5e5ea; }
+.day-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 10px 12px 4px; }
+.day-header { text-align: center; font-size: 11px; font-weight: 700; padding: 4px 2px; border-radius: 4px; color: white; }
+.day-header.sun { background: #FF6B6B; }
+.day-header.sat { background: #4DABF7; }
+.day-header.weekday { background: #74C0FC; }
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 4px 12px 16px; }
+.cell { aspect-ratio: 1; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; position: relative; cursor: pointer; transition: transform 0.1s; user-select: none; }
+.cell:active { transform: scale(0.92); }
+.cell .date-num { position: absolute; top: 4px; left: 6px; font-size: 12px; opacity: 0.95; font-weight: 700; text-shadow: 0 0 2px rgba(0,0,0,0.15); }
+.cell .note-mark { position: absolute; top: 2px; right: 2px; font-size: 9px; opacity: 0.7; }
+.cell.empty { background: #34D399; color: white; }
+.cell.today { box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.5); }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: 16px; padding: 18px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; }
+.modal-title { text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 14px; }
+.modal-textarea { width: 100%; height: 110px; padding: 12px; border: 3px solid #1ABC9C; border-radius: 12px; font-size: 16px; font-family: inherit; resize: none; }
+.emoji-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 0; }
+.emoji-btn { aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; cursor: pointer; transition: transform 0.1s; user-select: none; }
+.emoji-btn:active { transform: scale(0.9); }
+.emoji-btn.selected { border-color: #34D399; box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.3); }
+.emoji-btn.clear-btn { background: #34D399; color: white; font-size: 11px; }
+.modal-actions { display: flex; gap: 8px; margin-top: 8px; }
+.btn { flex: 1; padding: 12px; border-radius: 12px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; min-height: 44px; }
+.btn-primary { background: #007AFF; color: white; }
+.btn-secondary { background: #f0f0f0; color: #1d1d1f; }
+.toolbar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #d2d2d7; padding: 10px 12px; display: flex; gap: 6px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+.toolbar-btn { flex: 1; padding: 10px 4px; background: #f5f5f7; border: 1px solid #d2d2d7; border-radius: 10px; font-size: 12px; cursor: pointer; min-height: 44px; }
+.stats-modal { font-size: 14px; line-height: 1.8; }
+.stats-modal table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.stats-modal td { padding: 6px 8px; border-bottom: 1px solid #eee; }
+.stats-modal td:last-child { text-align: right; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="header">
+  <button class="nav-btn" onclick="navMonth(-1)">←</button>
+  <div class="header-month" id="currentMonthLabel"></div>
+  <button class="nav-btn" onclick="navMonth(1)">→</button>
+</div>
+
+<div class="mini-months">
+  <div class="mini-month" onclick="navMonth(-1)">
+    <div class="mini-month-label" id="prevMonthLabel"></div>
+    <div class="mini-grid" id="prevMiniGrid"></div>
+  </div>
+  <div class="mini-month" onclick="navMonth(1)">
+    <div class="mini-month-label" id="nextMonthLabel"></div>
+    <div class="mini-grid" id="nextMiniGrid"></div>
+  </div>
+</div>
+
+<div class="day-headers">
+  <div class="day-header sun">Sun</div>
+  <div class="day-header weekday">Mon</div>
+  <div class="day-header weekday">Tue</div>
+  <div class="day-header weekday">Wed</div>
+  <div class="day-header weekday">Thu</div>
+  <div class="day-header weekday">Fri</div>
+  <div class="day-header sat">Sat</div>
+</div>
+
+<div class="grid" id="mainGrid"></div>
+
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title" id="modalDate"></div>
+    <textarea class="modal-textarea" id="modalText" placeholder="メモ(例: 🍺3 / 6時間 / まあまあ)"></textarea>
+    <div class="emoji-picker" id="emojiPicker"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDay()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="statsModal" onclick="if(event.target===this)closeStatsModal()">
+  <div class="modal stats-modal">
+    <div class="modal-title">📊 Stats</div>
+    <div id="statsContent"></div>
+    <div class="modal-actions" style="margin-top: 16px;">
+      <button class="btn btn-secondary" onclick="closeStatsModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="toolbar-btn" onclick="exportJSON()">📤 Export</button>
+  <button class="toolbar-btn" onclick="importJSON()">📥 Import</button>
+  <button class="toolbar-btn" onclick="importDiaryTxt()">📥 旧形式</button>
+  <button class="toolbar-btn" onclick="showStats()">📊 Stats</button>
+  <button class="toolbar-btn" id="syncStatusBtn" style="flex:0 0 auto; min-width:90px;">⚙️ 未設定</button>
+</div>
+
+<script src="sync.js"></script>
+<script>
+// Emoji set with colors and score (existing parse_gokigen.py に準拠 + UI追加色)
+const EMOJIS = [
+  { e: '^o^',  color: '#E91E63', score: 5, label: '絶好調' },
+  { e: '~.~',  color: '#FFD54F', score: 3, label: 'ダルい' },
+  { e: 'T-T',  color: '#2196F3', score: 0, label: 'もう無理' },
+  { e: '^_^',  color: '#F8BBD0', score: 4, label: 'まあまあ' },
+  { e: 'ز_ز',  color: '#4FC3F7', score: 1, label: '憂鬱' },
+  { e: '*_*',  color: '#AD1457', score: 2, label: '気持ち悪い' },
+  { e: '>_<',  color: '#FF9800', score: 2, label: 'ツラい' },
+];
+
+let currentDate = new Date();
+let editingDate = null;
+let editingEmoji = null;
+
+let data = JSON.parse(localStorage.getItem('gokigen_data') || '{}');
+
+const sync = new GitHubSync({
+  appName: 'gokigen',
+  repoOwner: 'ttyf27',
+  repoName: 'mylife',
+  filePath: 'data/pwa/gokigen.json',
+  branch: 'claude/garmin-data-analysis-V2xrD',
+  getData: () => JSON.parse(localStorage.getItem('gokigen_data') || '{}'),
+});
+
+function save() {
+  localStorage.setItem('gokigen_data', JSON.stringify(data));
+  sync.markDirtyAndPush();
+}
+
+function pad(n) { return n.toString().padStart(2, '0'); }
+function ymd(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+
+function getEmojiInfo(e) {
+  return EMOJIS.find(x => x.e === e);
+}
+
+function isLightEmoji(e) {
+  return e === '^_^' || e === '~.~';
+}
+
+function render() {
+  const m = currentDate.getMonth() + 1;
+  const y = currentDate.getFullYear();
+  document.getElementById('currentMonthLabel').textContent = `${y}-${m}`;
+
+  renderMiniMonth(-1, 'prevMonthLabel', 'prevMiniGrid');
+  renderMiniMonth(1, 'nextMonthLabel', 'nextMiniGrid');
+
+  const grid = document.getElementById('mainGrid');
+  grid.innerHTML = '';
+
+  const firstDay = new Date(y, m-1, 1);
+  const lastDay = new Date(y, m, 0);
+  const daysInMonth = lastDay.getDate();
+  const startDow = firstDay.getDay();
+  const todayStr = ymd(new Date());
+
+  for (let i = 0; i < startDow; i++) {
+    grid.appendChild(document.createElement('div'));
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = ymd(new Date(y, m-1, d));
+    const entry = data[dateStr] || {};
+    const cell = document.createElement('div');
+    const info = entry.emoji ? getEmojiInfo(entry.emoji) : null;
+    cell.className = 'cell' + (entry.emoji ? '' : ' empty') + (dateStr === todayStr ? ' today' : '');
+    cell.style.background = info ? info.color : '#34D399';
+    cell.style.color = (info && isLightEmoji(entry.emoji)) ? '#000' : 'white';
+    cell.innerHTML = `
+      <div class="date-num">${d}</div>
+      ${entry.emoji ? `<div>${entry.emoji}</div>` : ''}
+      ${entry.comment ? '<div class="note-mark">💬</div>' : ''}
+    `;
+    cell.onclick = () => openModal(dateStr);
+    grid.appendChild(cell);
+  }
+}
+
+function renderMiniMonth(offset, labelId, gridId) {
+  const d = new Date(currentDate);
+  d.setMonth(d.getMonth() + offset);
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  document.getElementById(labelId).textContent = `${y}/${m}`;
+
+  const grid = document.getElementById(gridId);
+  grid.innerHTML = '';
+  const lastDay = new Date(y, m, 0);
+  for (let i = 1; i <= lastDay.getDate(); i++) {
+    const dateStr = ymd(new Date(y, m-1, i));
+    const entry = data[dateStr] || {};
+    const info = entry.emoji ? getEmojiInfo(entry.emoji) : null;
+    const cell = document.createElement('div');
+    cell.className = 'mini-cell';
+    cell.style.background = info ? info.color : '#e5e5ea';
+    grid.appendChild(cell);
+  }
+}
+
+function navMonth(delta) {
+  currentDate.setMonth(currentDate.getMonth() + delta);
+  render();
+}
+
+function openModal(dateStr) {
+  editingDate = dateStr;
+  const entry = data[dateStr] || {};
+  editingEmoji = entry.emoji || null;
+  document.getElementById('modalDate').textContent = dateStr;
+  document.getElementById('modalText').value = entry.comment || '';
+
+  const picker = document.getElementById('emojiPicker');
+  picker.innerHTML = '';
+  EMOJIS.forEach(({e, color}) => {
+    const btn = document.createElement('div');
+    btn.className = 'emoji-btn' + (e === editingEmoji ? ' selected' : '');
+    btn.style.background = color;
+    btn.style.color = isLightEmoji(e) ? '#000' : 'white';
+    btn.textContent = e;
+    btn.onclick = () => {
+      editingEmoji = e;
+      document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    picker.appendChild(btn);
+  });
+
+  // クリアボタン (緑=未入力)
+  const clearBtn = document.createElement('div');
+  clearBtn.className = 'emoji-btn clear-btn' + (editingEmoji === null ? ' selected' : '');
+  clearBtn.textContent = 'クリア';
+  clearBtn.onclick = () => {
+    editingEmoji = null;
+    document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+    clearBtn.classList.add('selected');
+  };
+  picker.appendChild(clearBtn);
+
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function saveDay() {
+  const comment = document.getElementById('modalText').value.trim();
+  if (editingEmoji || comment) {
+    data[editingDate] = { emoji: editingEmoji, comment };
+  } else if (data[editingDate]) {
+    delete data[editingDate];
+  }
+  save();
+  closeModal();
+  render();
+}
+
+function exportJSON() {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `gokigen_${ymd(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        if (confirm(`${Object.keys(imported).length} 件の記録を取り込みます(既存と統合、新が優先)`)) {
+          data = { ...data, ...imported };
+          save();
+          render();
+          alert('取り込み完了');
+        }
+      } catch (err) {
+        alert('JSONの読み込みに失敗: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function importDiaryTxt() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.txt,text/plain';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = parseDiaryTxt(ev.target.result);
+        const count = Object.keys(imported).length;
+        if (confirm(`旧形式から ${count} 件を取り込みます(既存と統合、新が優先)`)) {
+          data = { ...data, ...imported };
+          save();
+          render();
+          alert(`取り込み完了 (${count}件)`);
+        }
+      } catch (err) {
+        alert('旧形式の読み込みに失敗: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// 旧 GOKIGEN diary.txt 形式パーサ (YYYY,M,D,emoji,first_line\n続き行...)
+function parseDiaryTxt(text) {
+  const result = {};
+  const lines = text.split('\n');
+  let cur = null;
+  for (const line of lines) {
+    const m = line.match(/^(\d{4}),(\d{1,2}),(\d{1,2}),([^,]*),(.*)$/);
+    if (m) {
+      if (cur) result[cur.date] = { emoji: cur.emoji || null, comment: cur.lines.join('\n').trim() };
+      const dateStr = `${m[1]}-${pad(parseInt(m[2]))}-${pad(parseInt(m[3]))}`;
+      cur = { date: dateStr, emoji: m[4].trim(), lines: [m[5].trim()].filter(x => x) };
+    } else if (line.startsWith('#') || line.trim() === '') {
+      if (cur) { result[cur.date] = { emoji: cur.emoji || null, comment: cur.lines.join('\n').trim() }; cur = null; }
+    } else {
+      if (cur) cur.lines.push(line.trim());
+    }
+  }
+  if (cur) result[cur.date] = { emoji: cur.emoji || null, comment: cur.lines.join('\n').trim() };
+  return result;
+}
+
+function showStats() {
+  const entries = Object.entries(data);
+  const total = entries.length;
+  const m = currentDate.getMonth() + 1;
+  const y = currentDate.getFullYear();
+  const thisMonth = entries.filter(([k]) => k.startsWith(`${y}-${pad(m)}`));
+
+  const counts = {};
+  EMOJIS.forEach(({e}) => counts[e] = 0);
+  thisMonth.forEach(([,v]) => { if (v.emoji && counts.hasOwnProperty(v.emoji)) counts[v.emoji]++; });
+  const scores = thisMonth.map(([,v]) => getEmojiInfo(v.emoji)?.score).filter(s => s !== undefined);
+  const avgMonth = scores.length ? (scores.reduce((a,b)=>a+b, 0) / scores.length).toFixed(2) : '-';
+
+  const allScores = entries.map(([,v]) => getEmojiInfo(v.emoji)?.score).filter(s => s !== undefined);
+  const avgAll = allScores.length ? (allScores.reduce((a,b)=>a+b, 0) / allScores.length).toFixed(2) : '-';
+
+  let html = `
+    <table>
+      <tr><td>📅 総記録日数</td><td>${total}</td></tr>
+      <tr><td>📊 全期間平均スコア</td><td>${avgAll}</td></tr>
+      <tr><td>${y}-${m} 記録日数</td><td>${thisMonth.length}</td></tr>
+      <tr><td>${y}-${m} 平均スコア</td><td>${avgMonth}</td></tr>
+    </table>
+    <table style="margin-top:12px">
+      <tr><td colspan="2" style="font-weight:600;background:#f5f5f7">${y}-${m} 顔文字分布</td></tr>
+  `;
+  EMOJIS.forEach(({e, color}) => {
+    if (counts[e] > 0) {
+      html += `<tr><td><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${color};vertical-align:middle"></span> ${e}</td><td>${counts[e]}</td></tr>`;
+    }
+  });
+  html += '</table>';
+  document.getElementById('statsContent').innerHTML = html;
+  document.getElementById('statsModal').classList.add('open');
+}
+
+function closeStatsModal() {
+  document.getElementById('statsModal').classList.remove('open');
+}
+
+render();
+
+// Attach sync status button
+sync.attachStatusElement(document.getElementById('syncStatusBtn'));
+
+// Service Worker 登録 (PWA化)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

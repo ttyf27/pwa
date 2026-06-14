@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="mylife">
+<meta name="theme-color" content="#1d1d1f">
+<link rel="manifest" href="manifest.json">
+<title>🐶ぽっち🌟のmyLife</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; background: #f5f5f7; color: #1d1d1f; padding-bottom: 40px; min-height: 100vh; -webkit-text-size-adjust: 100%; }
+button { font-family: inherit; cursor: pointer; }
+
+.header { background: #1d1d1f; color: #fff; padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; }
+.header-title { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+.header-sub { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+.sync-btn { padding: 6px 12px; background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 8px; font-size: 12px; min-width: 60px; }
+
+.status-bar { background: #fff; padding: 8px 16px; font-size: 11px; color: #6e6e73; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; }
+.status-bar .err { color: #FF6B6B; }
+
+.card { background: #fff; margin: 12px; border-radius: 14px; padding: 16px; }
+.card-title { font-size: 12px; color: #6e6e73; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: 600; }
+
+/* 3軸 */
+.three-axis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.axis { background: #f5f5f7; padding: 12px; border-radius: 12px; text-align: center; }
+.axis-icon { font-size: 22px; margin-bottom: 4px; }
+.axis-label { font-size: 10px; color: #6e6e73; margin-bottom: 4px; }
+.axis-value { font-size: 17px; font-weight: 700; line-height: 1.2; color: #FF6B6B; }
+.axis-value.empty { color: #ccc; font-weight: 400; font-size: 14px; }
+.axis-value .unit { font-size: 11px; color: #6e6e73; margin-left: 2px; }
+.axis-sub { font-size: 10px; color: #999; margin-top: 4px; }
+
+/* MA */
+.ma-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ma-cell { background: #f5f5f7; padding: 12px; border-radius: 12px; }
+.ma-cell .ma-label { font-size: 11px; color: #6e6e73; margin-bottom: 4px; }
+.ma-cell .ma-value { font-size: 18px; font-weight: 700; }
+.ma-cell .ma-sub { font-size: 10px; color: #999; margin-top: 2px; }
+
+/* HIIT Z5 リング */
+.hiit-ring-box { display: flex; align-items: center; gap: 16px; }
+.hiit-ring { width: 110px; height: 110px; position: relative; flex-shrink: 0; }
+.hiit-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.hiit-ring .ring-bg { stroke: #f0f0f0; stroke-width: 12; fill: none; }
+.hiit-ring .ring-fg { stroke: #FF9800; stroke-width: 12; fill: none; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
+.hiit-ring .ring-fg.gold { stroke: #FFC107; }
+.hiit-ring .ring-fg.full { stroke: #4CAF50; }
+.hiit-ring .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.hiit-ring .ring-num { font-size: 26px; font-weight: 800; line-height: 1; }
+.hiit-ring .ring-lbl { font-size: 10px; color: #6e6e73; margin-top: 2px; }
+.hiit-info { flex: 1; min-width: 0; }
+.hiit-info .info-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; border-bottom: 1px solid #f5f5f7; }
+.hiit-info .info-row:last-child { border-bottom: none; }
+.hiit-info .info-row .lbl { color: #6e6e73; }
+.hiit-info .info-row .val { font-weight: 600; }
+
+/* 疲労インジケータ */
+.fatigue-grid { display: flex; flex-direction: column; gap: 10px; }
+.fatigue-row { display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 10px; padding: 10px; background: #f5f5f7; border-radius: 10px; }
+.fat-label { font-size: 12px; color: #6e6e73; font-weight: 600; }
+.fat-judge { font-size: 14px; font-weight: 700; text-align: left; }
+.fat-judge.ok { color: #4CAF50; }
+.fat-judge.warn { color: #FFC107; }
+.fat-judge.alert { color: #FF9800; }
+.fat-judge.danger { color: #FF6B6B; }
+.fat-detail { font-size: 11px; color: #6e6e73; }
+
+/* AI気付き placeholder */
+.ai-placeholder { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 14px; border-radius: 12px; text-align: center; font-size: 13px; color: #92400e; }
+.ai-placeholder .ai-icon { font-size: 22px; margin-bottom: 6px; }
+
+/* 今月の進捗 (BB / アル 着地見込み) */
+.progress-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.progress-cell { background: #f5f5f7; padding: 12px; border-radius: 10px; text-align: center; }
+.progress-cell .p-label { font-size: 11px; color: #6e6e73; margin-bottom: 4px; font-weight: 600; }
+.progress-cell .p-val { font-size: 19px; font-weight: 700; line-height: 1.1; }
+.progress-cell .p-sub { font-size: 10px; color: #6e6e73; margin-top: 4px; }
+.progress-cell .p-judge { font-size: 11px; font-weight: 700; margin-top: 6px; padding: 3px 6px; border-radius: 6px; display: inline-block; }
+.progress-cell .p-judge.ok { background: #d4edda; color: #155724; }
+.progress-cell .p-judge.warn { background: #fff3cd; color: #856404; }
+.progress-cell .p-judge.alert { background: #f8d7da; color: #721c24; }
+
+/* 言語ヘルス */
+.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lang-cell { background: #f5f5f7; padding: 10px; border-radius: 10px; }
+.lang-cell .l-label { font-size: 11px; color: #6e6e73; margin-bottom: 4px; font-weight: 600; }
+.lang-cell .l-val { font-size: 17px; font-weight: 700; }
+.lang-cell .l-sub { font-size: 10px; color: #6e6e73; margin-top: 3px; }
+.lang-cell.warn { background: #fff3cd; }
+.lang-cell.alert { background: #f8d7da; }
+
+.progress-cell .p-extra { font-size: 11px; margin-top: 8px; padding: 6px 8px; border-radius: 6px; }
+.progress-cell .p-extra.ok { background: #d4edda; color: #155724; }
+.progress-cell .p-extra.warn { background: #fff3cd; color: #856404; }
+.progress-cell .p-extra.alert { background: #f8d7da; color: #721c24; }
+
+/* 絶好調インジ (§31-A72) */
+.zekko-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.zekko-cell { background: #f5f5f7; padding: 12px; border-radius: 10px; text-align: center; }
+.zekko-cell .z-label { font-size: 11px; color: #6e6e73; margin-bottom: 4px; font-weight: 600; }
+.zekko-cell .z-val { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.zekko-cell .z-sub { font-size: 10px; color: #6e6e73; margin-top: 4px; }
+.zekko-quad { padding: 12px; border-radius: 10px; text-align: center; margin-bottom: 10px; font-weight: 700; font-size: 14px; }
+.zekko-quad.q1 { background: linear-gradient(135deg, #d4edda, #c3e6cb); color: #155724; }
+.zekko-quad.q2 { background: #fff3cd; color: #856404; }
+.zekko-quad.q3 { background: linear-gradient(135deg, #ffe5d9, #ffc9b8); color: #8b3a00; }
+.zekko-quad.q4 { background: #f8d7da; color: #721c24; }
+.zekko-quad .q-sub { font-size: 11px; font-weight: 400; margin-top: 4px; }
+.zekko-month { background: #f5f5f7; padding: 10px 12px; border-radius: 10px; margin-bottom: 10px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
+.zekko-month .zm-label { color: #6e6e73; font-weight: 600; }
+.zekko-month .zm-val { font-weight: 700; }
+.zekko-month .zm-pred { font-size: 11px; color: #6e6e73; }
+.zekko-hist-title { font-size: 11px; color: #6e6e73; margin-bottom: 6px; font-weight: 600; }
+.zekko-hist { display: flex; flex-direction: column; gap: 4px; }
+.zekko-hist-row { display: grid; grid-template-columns: 50px 1fr 50px; align-items: center; gap: 8px; font-size: 11px; }
+.zekko-hist-row .zh-ym { color: #6e6e73; font-weight: 600; }
+.zekko-hist-row .zh-bar { height: 12px; background: #e5e5e7; border-radius: 6px; overflow: hidden; }
+.zekko-hist-row .zh-bar-fill { height: 100%; background: linear-gradient(90deg, #4DABF7, #748FFC); border-radius: 6px; }
+.zekko-hist-row .zh-bar-fill.zero { background: #f8d7da; }
+.zekko-hist-row .zh-val { text-align: right; font-weight: 700; }
+
+/* 健診ダッシュボード */
+.kenshin-highlights { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.kenshin-hl { background: #f5f5f7; padding: 12px; border-radius: 10px; text-align: center; }
+.kenshin-hl .hl-item { font-size: 11px; color: #6e6e73; margin-bottom: 4px; }
+.kenshin-hl .hl-val { font-size: 18px; font-weight: 700; }
+.kenshin-hl .hl-old { color: #FF6B6B; }
+.kenshin-hl .hl-arrow { font-size: 12px; color: #6e6e73; margin: 0 4px; }
+.kenshin-hl .hl-new { color: #4CAF50; }
+.kenshin-hl .hl-delta { font-size: 10px; color: #6e6e73; margin-top: 3px; }
+.kenshin-list { display: flex; flex-direction: column; gap: 6px; }
+.kenshin-row { display: grid; grid-template-columns: 90px 1fr 60px 20px; align-items: center; gap: 8px; padding: 6px 8px; background: #f5f5f7; border-radius: 8px; }
+.kenshin-row .k-label { font-size: 11px; color: #6e6e73; font-weight: 600; }
+.kenshin-row .k-spark { height: 22px; }
+.kenshin-row .k-spark svg { width: 100%; height: 100%; }
+.kenshin-row .k-val { font-size: 12px; font-weight: 700; text-align: right; }
+.kenshin-row .k-arrow { font-size: 14px; text-align: center; }
+.kenshin-row .k-arrow.up-bad { color: #FF6B6B; }
+.kenshin-row .k-arrow.down-good { color: #4CAF50; }
+.kenshin-row .k-arrow.flat { color: #999; }
+.kenshin-row.collapsed { display: none; }
+.kenshin-row.focus { background: linear-gradient(90deg, #fff5e6 0%, #f5f5f7 30%); border-left: 3px solid #FF9800; }
+.kenshin-row .k-focus-badge { font-size: 10px; margin-left: 4px; }
+.kenshin-filter-bar { display: flex; gap: 6px; margin: 4px 0 10px; padding: 0 2px; }
+.kfilter-btn { flex: 1; padding: 8px 12px; border: 1px solid #d2d2d7; background: #fff; color: #6e6e73; font-size: 12px; font-weight: 600; border-radius: 8px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.kfilter-btn.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
+.kfilter-btn:active { transform: scale(0.97); }
+
+/* 健診 将来予測 */
+/* 健診 体重20年経年テーブル */
+.kenshin-weight20 { margin-top: 14px; padding-top: 12px; border-top: 1px dashed #d2d2d7; }
+.kenshin-weight20-title { font-size: 11px; color: #6e6e73; margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px; }
+.w20-row { display: grid; grid-template-columns: 60px 40px 60px 50px 1fr; gap: 6px; padding: 5px 8px; align-items: center; font-size: 11px; border-bottom: 1px solid #f5f5f7; }
+.w20-row.head { font-size: 10px; color: #999; border-bottom: 1px solid #d2d2d7; padding: 4px 8px; }
+.w20-row.head .w-month, .w20-row.head .w-weight, .w20-row.head .w-bmi { color: #999; font-weight: 600; }
+.w20-row .w-month, .w20-row .w-age { color: #6e6e73; }
+.w20-row .w-age { text-align: right; }
+.w20-row .w-weight { font-weight: 700; text-align: right; }
+.w20-row .w-bmi { text-align: right; color: #4DABF7; }
+.w20-row .w-delta { font-size: 10px; }
+.w20-row.bold .w-month, .w20-row.bold .w-weight { color: #c0392b; }
+.w20-row .w-delta.up { color: #c0392b; font-weight: 700; }
+.w20-row .w-delta.down { color: #27ae60; font-weight: 700; }
+
+.kenshin-forecast { margin-top: 14px; padding-top: 12px; border-top: 1px dashed #d2d2d7; }
+.kenshin-forecast-title { font-size: 11px; color: #6e6e73; margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px; }
+.forecast-row { display: grid; grid-template-columns: 70px 1fr 1fr 1fr; gap: 6px; padding: 6px 8px; background: #f5f5f7; border-radius: 8px; margin-bottom: 6px; align-items: center; font-size: 11px; }
+.forecast-row .f-label { font-weight: 600; color: #6e6e73; }
+.forecast-row .f-cur { text-align: center; }
+.forecast-row .f-pred { text-align: center; font-weight: 700; }
+.forecast-row .f-warn { text-align: center; font-size: 10px; color: #c0392b; font-weight: 600; }
+.forecast-row .f-warn.ok { color: #27ae60; }
+.forecast-row .f-warn.na { color: #999; }
+.forecast-head { display: grid; grid-template-columns: 70px 1fr 1fr 1fr; gap: 6px; padding: 0 8px 4px; font-size: 10px; color: #999; }
+
+/* ボトムバー (dashboard 遷移) */
+.bottom-bar { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; margin: 12px; border-radius: 14px; padding: 14px 8px; gap: 4px; }
+.bb-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: #1d1d1f; padding: 8px 4px; border-radius: 10px; }
+.bb-btn:active { background: #f0f0f0; }
+.bb-icon { font-size: 32px; margin-bottom: 6px; line-height: 1; }
+.bb-name { font-size: 12px; color: #6e6e73; }
+
+/* PAT modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 14px; padding: 20px; width: 100%; max-width: 380px; }
+.modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 12px; text-align: center; }
+.modal .field { margin-bottom: 12px; }
+.modal label { display: block; font-size: 12px; color: #6e6e73; margin-bottom: 4px; }
+.modal input { width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 13px; font-family: monospace; }
+.modal .hint { font-size: 11px; color: #6e6e73; margin-top: 4px; line-height: 1.4; }
+.modal .actions { display: flex; gap: 8px; margin-top: 14px; }
+.modal .actions button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-size: 14px; font-weight: 600; min-height: 44px; font-family: inherit; }
+.btn-primary { background: #1d1d1f; color: #fff; }
+.btn-secondary { background: #f0f0f0; color: #1d1d1f; }
+
+.loading { padding: 40px 20px; text-align: center; color: #6e6e73; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">🐶ぽっち🌟のmyLife</div>
+    <div class="header-sub" id="todayLabel">読み込み中…</div>
+  </div>
+  <button class="sync-btn" id="syncBtn" onclick="reloadAll()">🔄</button>
+</div>
+
+<div class="status-bar">
+  <span id="statusText">起動中…</span>
+  <span id="patStatus" style="cursor:pointer;" onclick="openPatModal()">⚙️ PAT</span>
+</div>
+
+<!-- 3軸サマリーは Garmin fetch タイミング都合で日次トラッキングと合わないため非表示 -->
+
+<!-- 直近トレンド -->
+<div class="card">
+  <div class="card-title">📈 直近トレンド</div>
+  <div class="ma-grid">
+    <div class="ma-cell">
+      <div class="ma-label">🍺 純アル/日</div>
+      <div class="ma-value" id="maAlcG">-</div>
+      <div class="ma-sub" id="maAlcSub"></div>
+    </div>
+    <div class="ma-cell">
+      <div class="ma-label">💴 支出/日 (平日)</div>
+      <div class="ma-value" id="maExp">-</div>
+      <div class="ma-sub" id="maExpSub"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 今月の進捗 (BB MAX 直近30日平均 / アルコール 月末着地予測) -->
+<div class="card">
+  <div class="card-title">📅 今月の進捗</div>
+  <div class="progress-grid">
+    <div class="progress-cell" id="progBb">
+      <div class="p-label">🔋 BB MAX 直近30日平均</div>
+      <div class="p-val" id="progBbCur">-</div>
+      <div class="p-sub" id="progBbSub"></div>
+      <div class="p-judge" id="progBbJudge"></div>
+    </div>
+    <div class="progress-cell" id="progAlc">
+      <div class="p-label">🍺 アルコール累計</div>
+      <div class="p-val" id="progAlcCur">-</div>
+      <div class="p-sub" id="progAlcSub"></div>
+      <div class="p-judge" id="progAlcJudge"></div>
+      <div class="p-extra" id="progAlcExtra"></div>
+    </div>
+  </div>
+</div>
+
+<!-- HIIT Z5 リング -->
+<div class="card">
+  <div class="card-title">🔥 今月の HIIT Z5</div>
+  <div class="hiit-ring-box">
+    <div class="hiit-ring">
+      <svg viewBox="0 0 120 120">
+        <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
+        <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="50" stroke-dasharray="314.16" stroke-dashoffset="314.16"></circle>
+      </svg>
+      <div class="ring-center">
+        <div class="ring-num" id="ringNum">-</div>
+        <div class="ring-lbl">分 / 目標15</div>
+      </div>
+    </div>
+    <div class="hiit-info">
+      <div class="info-row"><span class="lbl">Z5 平均時間</span><span class="val" id="hiitAvg">-</span></div>
+      <div class="info-row"><span class="lbl">Z5🔥(18分-) 回数</span><span class="val" id="hiitWin">-</span></div>
+      <div class="info-row"><span class="lbl">最新 Z5 (MM/DD)</span><span class="val" id="hiitLatestZ5">-</span></div>
+      <div class="info-row"><span class="lbl">最大 Z5</span><span class="val" id="hiitMax">-</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 絶好調インジ (§31-A72 主観×客観) -->
+<div class="card">
+  <div class="card-title">🌟 絶好調インジ (主観×客観)</div>
+  <div class="zekko-grid">
+    <div class="zekko-cell">
+      <div class="z-label">💤 寝たzzz80超 直近30日</div>
+      <div class="z-val" id="zekkoRate80">-</div>
+      <div class="z-sub" id="zekkoRate80Sub"></div>
+    </div>
+    <div class="zekko-cell">
+      <div class="z-label">😊 ^o^率 直近30日</div>
+      <div class="z-val" id="zekkoHo">-</div>
+      <div class="z-sub" id="zekkoHoSub"></div>
+    </div>
+  </div>
+  <div class="zekko-quad" id="zekkoQuad">-</div>
+  <div class="zekko-month" id="zekkoMonth">
+    <div><span class="zm-label">📅 今月 寝たzzz80超</span></div>
+    <div><span class="zm-val" id="zekkoMonthVal">-</span> <span class="zm-pred" id="zekkoMonthPred"></span></div>
+  </div>
+  <div class="zekko-hist-title">📊 過去6ヶ月 寝たzzz80超 推移</div>
+  <div class="zekko-hist" id="zekkoHist"></div>
+</div>
+
+<!-- 疲労インジ -->
+<div class="card">
+  <div class="card-title">🧭 疲労インジ</div>
+  <div class="fatigue-grid">
+    <div class="fatigue-row">
+      <div class="fat-label">💤 BB MAX MA7</div>
+      <div class="fat-judge" id="fatBb">-</div>
+      <div class="fat-detail" id="fatBbDetail"></div>
+    </div>
+    <div class="fatigue-row">
+      <div class="fat-label">❤️ RHR MA7</div>
+      <div class="fat-judge" id="fatRhr">-</div>
+      <div class="fat-detail" id="fatRhrDetail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- AI気付き (placeholder) -->
+<div class="card" style="background:none; padding: 0 12px;">
+  <div class="ai-placeholder">
+    <div class="ai-icon">🤖</div>
+    <div>AI気付き枠 (Stage 3 ヘッドレス自律観察で実装予定)</div>
+  </div>
+</div>
+
+<!-- 言語ヘルス (§31-A64) - 非表示 (ぽっち🌟さん指示 2026-06-10)
+<div class="card">
+  <div class="card-title" id="langTitle" style="cursor:pointer; user-select:none;">📜 言語ヘルス <span id="langToggle" style="float:right">▼</span></div>
+  <div id="langBody">
+    <div class="lang-grid" id="langGrid"></div>
+  </div>
+</div>
+-->
+
+<!-- 健診ダッシュボード (§31-A59) - 体重20年を上に、将来予測は削除 (ぽっち🌟さん指示) -->
+<div class="card">
+  <div class="card-title" id="kenshinTitle" style="cursor:pointer; user-select:none;">🩺 健診ダッシュボード <span id="kenshinToggle" style="float:right">▼</span></div>
+  <div id="kenshinBody">
+    <div class="kenshin-weight20" id="kenshinWeight20"></div>
+    <div class="kenshin-highlights" id="kenshinHighlights"></div>
+    <div class="kenshin-list" id="kenshinList"></div>
+  </div>
+</div>
+
+<!-- ボトムバー: dashboard 遷移 -->
+<div class="bottom-bar">
+  <a class="bb-btn" href="https://dashboard-ten-mauve-39.vercel.app/#calendar" target="_blank" rel="noopener">
+    <div class="bb-icon">📅</div>
+    <div class="bb-name">カレンダー</div>
+  </a>
+  <a class="bb-btn" href="https://dashboard-ten-mauve-39.vercel.app/#timeline" target="_blank" rel="noopener">
+    <div class="bb-icon">📋</div>
+    <div class="bb-name">タイムライン</div>
+  </a>
+  <a class="bb-btn" href="https://dashboard-ten-mauve-39.vercel.app/#analysis" target="_blank" rel="noopener">
+    <div class="bb-icon">📊</div>
+    <div class="bb-name">分析</div>
+  </a>
+</div>
+
+<!-- PAT modal -->
+<div class="modal-overlay" id="patModal" onclick="if(event.target===this)closePatModal()">
+  <div class="modal">
+    <h3>GitHub PAT 設定</h3>
+    <div class="field">
+      <label>Personal Access Token (PAT)</label>
+      <input type="password" id="patInput" placeholder="github_pat_xxx..." autocomplete="off">
+      <div class="hint">cc_garmin リポジトリの Contents read 権限が必要。他のmylife系PWAと同じトークンが使えます。</div>
+    </div>
+    <div class="actions">
+      <button class="btn-secondary" onclick="closePatModal()">キャンセル</button>
+      <button class="btn-primary" onclick="savePat()">保存して再取得</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const PAT_KEY = '__github_pat';
+const CACHE_KEY = '__mylife_cache';
+const REPO_OWNER = 'ttyf27';
+const REPO_NAME = 'mylife';
+const BRANCH = 'claude/garmin-data-analysis-V2xrD';
+
+// 重要な定数
+const HIIT_Z5_GOAL_MIN = 15;
+const HIIT_WIN_THRESHOLD = 18;
+const KAKEIBO_WD_BUDGET = 3707;
+const KAKEIBO_WE_BUDGET = 14086;
+
+// emoji score (parse_gokigen.py 準拠)
+const EMOJI_SCORE = {
+  '^o^': 5, '^_^': 4, '~.~': 3, '>_<': 2, '*_*': 2, 'ز_ز': 1, '--#': 1, 'T-T': 0,
+};
+
+let allData = { gokigen: {}, alcohol: { data: {}, dailyPureG: {} }, kakeibo: { entries: [] }, hiit: { sessions: [] } };
+let lastFetch = null;
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function weekday(d) { return ['日','月','火','水','木','金','土'][d.getDay()]; }
+function fmtYen(n) { return '¥' + (n||0).toLocaleString(); }
+function fmtShortYen(n) {
+  if (Math.abs(n) >= 10000) return (Math.round(n/1000)/10) + '万';
+  if (Math.abs(n) >= 1000) return (Math.round(n/100)/10) + 'k';
+  return String(n);
+}
+
+function getPat() { return localStorage.getItem(PAT_KEY) || ''; }
+function setPat(v) { if (v) localStorage.setItem(PAT_KEY, v); else localStorage.removeItem(PAT_KEY); }
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (raw) {
+      const c = JSON.parse(raw);
+      allData = c.allData || allData;
+      lastFetch = c.lastFetch || null;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+function saveCache() {
+  localStorage.setItem(CACHE_KEY, JSON.stringify({ allData, lastFetch }));
+}
+
+async function fetchJson(path) {
+  const pat = getPat();
+  if (!pat) throw new Error('PAT未設定');
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${encodeURIComponent(BRANCH)}&t=${Date.now()}`;
+  const res = await fetch(url, {
+    cache: 'no-store',
+    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' }
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json();
+  const decoded = decodeURIComponent(escape(atob(j.content.replace(/\n/g, ''))));
+  return JSON.parse(decoded);
+}
+
+async function fetchCsv(path) {
+  const pat = getPat();
+  if (!pat) throw new Error('PAT未設定');
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${encodeURIComponent(BRANCH)}&t=${Date.now()}`;
+  const res = await fetch(url, {
+    cache: 'no-store',
+    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' }
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json();
+  return decodeURIComponent(escape(atob(j.content.replace(/\n/g, ''))));
+}
+
+async function reloadAll() {
+  const pat = getPat();
+  if (!pat) { openPatModal(); return; }
+  updateStatus('🔄 取得中…', false);
+  try {
+    const [gokigen, alcohol, kakeibo, hiitCsv, fmCsv, kenshinCsv, langCsv] = await Promise.all([
+      fetchJson('data/pwa/gokigen.json').catch(() => null),
+      fetchJson('data/pwa/alcohol.json').catch(() => null),
+      fetchJson('data/pwa/kakeibo.json').catch(() => null),
+      // HIIT: activities_summary.csv の hiit のみ抽出
+      fetchCsv('data/activities/activities_summary.csv').catch(() => null),
+      // Garmin: feature_matrix.csv から最新の睡眠スコア + RHR
+      fetchCsv('data/feature_matrix.csv').catch(() => null),
+      // 健診: kenshin_timeline.csv (23年経年)
+      fetchCsv('data/health_checkup/kenshin_timeline.csv').catch(() => null),
+      // 言語ヘルス: 月次集計CSV
+      fetchCsv('data/text/language_health_monthly.csv').catch(() => null),
+    ]);
+    if (gokigen) allData.gokigen = gokigen;
+    if (alcohol) allData.alcohol = alcohol;
+    if (kakeibo) allData.kakeibo = kakeibo;
+    if (fmCsv) allData.garmin = parseGarminFromCsv(fmCsv);
+    if (kenshinCsv) allData.kenshin = parseKenshinFromCsv(kenshinCsv);
+    if (langCsv) allData.lang = parseLangFromCsv(langCsv);
+    if (hiitCsv) {
+      // zoneCache (activity_id → z5_sec) は過去取得分を保持して使い回す
+      const prevZoneCache = (allData.hiit && allData.hiit.zoneCache) || {};
+      allData.hiit = parseHiitFromCsv(hiitCsv);
+      allData.hiit.zoneCache = prevZoneCache;
+
+      // 今月セッションのうち未キャッシュだけ並列fetch (Garmin過去活動は不変なのでワンタイム)
+      const _today = new Date();
+      const _ym = `${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}`;
+      const monthSess = allData.hiit.sessions.filter(s => s.date && s.date.startsWith(_ym));
+      const toFetch = monthSess.filter(s => !(s.activity_id in allData.hiit.zoneCache));
+      await Promise.all(toFetch.map(async s => {
+        const hrZones = await fetchJson(`data/activities/hiit_hr_zones_${s.activity_id}.json`).catch(() => null);
+        if (hrZones && Array.isArray(hrZones)) {
+          const z5 = hrZones.find(z => z.zoneNumber === 5);
+          allData.hiit.zoneCache[s.activity_id] = z5 ? z5.secsInZone : 0;
+        }
+      }));
+
+      // 最新セッション (sessionCount==0 月の表示用) も zoneCache から
+      if (allData.hiit.sessions.length > 0) {
+        const latest = allData.hiit.sessions[allData.hiit.sessions.length - 1];
+        let z5_sec = allData.hiit.zoneCache[latest.activity_id];
+        if (z5_sec === undefined) {
+          const hrZones = await fetchJson(`data/activities/hiit_hr_zones_${latest.activity_id}.json`).catch(() => null);
+          if (hrZones && Array.isArray(hrZones)) {
+            const z5 = hrZones.find(z => z.zoneNumber === 5);
+            z5_sec = z5 ? z5.secsInZone : 0;
+            allData.hiit.zoneCache[latest.activity_id] = z5_sec;
+          }
+        }
+        allData.hiit.latestSession = {
+          date: latest.date,
+          duration: latest.duration,
+          max_hr: latest.max_hr,
+          avg_hr: latest.avg_hr,
+          z5_sec: z5_sec || 0,
+        };
+      }
+    }
+    lastFetch = Date.now();
+    saveCache();
+    updateStatus(`☁️ ${fmtFetchTime(lastFetch)} (PAT設定済)`, false);
+    renderAll();
+  } catch (e) {
+    updateStatus(`⚠️ ${e.message}`, true);
+    renderAll(); // cache表示
+  }
+}
+
+function parseGarminFromCsv(csv) {
+  // feature_matrix.csv から最新の睡眠スコア・RHR と、直近の bb_max/resting_hr/score_overall 系列を抜く
+  const lines = csv.trim().split('\n');
+  const header = lines[0].split(',');
+  const idxDate = header.indexOf('date');
+  const idxScore = header.indexOf('score_overall');
+  const idxRhr = header.indexOf('resting_hr');
+  const idxBb = header.indexOf('bb_max');
+  const idxCh = header.indexOf('bb_charged');
+  let latestSleep = null, latestRhr = null;
+  const series = []; // 直近の全行 (date, bb_max, bb_charged, resting_hr, sleep_score) を配列で保持
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',');
+    const date = cols[idxDate];
+    if (!date) continue;
+    const bb = parseFloat(cols[idxBb]);
+    const ch = idxCh >= 0 ? parseFloat(cols[idxCh]) : NaN;
+    const rh = parseFloat(cols[idxRhr]);
+    const sc = parseFloat(cols[idxScore]);
+    series.push({
+      date,
+      bb_max: !isNaN(bb) ? bb : null,
+      bb_charged: !isNaN(ch) ? ch : null,
+      rhr: !isNaN(rh) ? rh : null,
+      sleep_score: !isNaN(sc) && sc > 0 ? sc : null,
+    });
+  }
+  // 末尾から最新の non-empty を拾う
+  for (let i = series.length - 1; i >= 0; i--) {
+    if (!latestSleep) {
+      const s = parseFloat(lines[i+1].split(',')[idxScore]);
+      if (!isNaN(s) && s > 0) latestSleep = { date: series[i].date, score: Math.round(s) };
+    }
+    if (!latestRhr && series[i].rhr != null && series[i].rhr > 0) {
+      latestRhr = { date: series[i].date, rhr: Math.round(series[i].rhr) };
+    }
+    if (latestSleep && latestRhr) break;
+  }
+  return { latestSleep, latestRhr, series };
+}
+
+function parseKenshinFromCsv(csv) {
+  // kenshin_timeline.csv (long format) を item ごとの時系列に整形
+  const lines = csv.trim().split('\n');
+  const header = lines[0].split(',');
+  const idxDate = header.indexOf('date');
+  const idxItem = header.indexOf('item');
+  const idxValue = header.indexOf('value');
+  const byItem = {};  // { item: [{date, value(num)}, ...] }
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',');
+    const date = cols[idxDate], item = cols[idxItem];
+    const v = parseFloat(cols[idxValue]);
+    if (!date || !item || isNaN(v)) continue;
+    if (!byItem[item]) byItem[item] = [];
+    byItem[item].push({ date, value: v });
+  }
+  // 日付順ソート
+  for (const k in byItem) byItem[k].sort((a, b) => a.date.localeCompare(b.date));
+  return byItem;
+}
+
+function parseHiitFromCsv(csv) {
+  const lines = csv.trim().split('\n');
+  const header = lines[0].split(',');
+  const idx = name => header.indexOf(name);
+  const out = { sessions: [] };
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',');
+    if (cols[idx('activity_type')] !== 'hiit') continue;
+    out.sessions.push({
+      date: cols[idx('date')],
+      duration: parseFloat(cols[idx('duration_seconds')] || '0') / 60,
+      avg_hr: parseFloat(cols[idx('avg_hr')] || '0'),
+      max_hr: parseFloat(cols[idx('max_hr')] || '0'),
+      activity_id: cols[idx('activity_id')],
+    });
+  }
+  return out;
+}
+
+function fmtFetchTime(t) {
+  const ago = Math.floor((Date.now() - t) / 60000);
+  if (ago < 1) return '同期済';
+  if (ago < 60) return `${ago}分前`;
+  return `${Math.floor(ago/60)}時間前`;
+}
+function updateStatus(t, isErr) {
+  const el = document.getElementById('statusText');
+  el.textContent = t;
+  el.className = isErr ? 'err' : '';
+}
+
+// ===== Rendering =====
+function renderAll() {
+  const td = new Date();
+  document.getElementById('todayLabel').textContent = `${td.getFullYear()}/${td.getMonth()+1}/${td.getDate()}(${weekday(td)})`;
+  renderMA();
+  renderMonthProgress();
+  renderZekkocho();
+  renderHiitRing();
+  renderFatigueIndicator();
+  // renderLang(); // 非表示 (ぽっち🌟さん指示 2026-06-10)
+  renderKenshin();
+  document.getElementById('patStatus').textContent = getPat() ? '⚙️ PAT' : '⚙️ PAT未設定';
+}
+
+function renderThreeAxis() {
+  const today = todayStr();
+  // 昨日キー (純アル/支出は前日基準: 「今朝の状態」= 今日メンタル + 前夜の酒 + 昨日の支出)
+  const ydDate = new Date();
+  ydDate.setDate(ydDate.getDate() - 1);
+  const yesterday = `${ydDate.getFullYear()}-${String(ydDate.getMonth()+1).padStart(2,'0')}-${String(ydDate.getDate()).padStart(2,'0')}`;
+  const ydMD = `${String(ydDate.getMonth()+1).padStart(2,'0')}/${String(ydDate.getDate()).padStart(2,'0')}`;
+  // 睡眠/RHR: Garmin の最新の score_overall と resting_hr
+  const sEl = document.getElementById('axSleep');
+  const sSub = document.getElementById('axSleepSub');
+  const ga = allData.garmin || {};
+  if (ga.latestSleep || ga.latestRhr) {
+    const sc = ga.latestSleep ? ga.latestSleep.score : null;
+    sEl.textContent = sc != null ? sc : '-';
+    sEl.classList.remove('empty');
+    // スコア色分け (高いほど良い)
+    let color = '#1d1d1f';
+    if (sc != null) {
+      if (sc >= 80) color = '#4CAF50';
+      else if (sc >= 65) color = '#FFC107';
+      else if (sc >= 50) color = '#FF9800';
+      else color = '#FF6B6B';
+    }
+    sEl.style.color = color;
+    const dateStr = ga.latestSleep ? ga.latestSleep.date.slice(5).replace('-', '/') :
+                    (ga.latestRhr ? ga.latestRhr.date.slice(5).replace('-', '/') : '');
+    const rhrStr = ga.latestRhr ? `❤️ ${ga.latestRhr.rhr}bpm` : '';
+    sSub.textContent = [dateStr, rhrStr].filter(Boolean).join(' ');
+  } else {
+    sEl.textContent = '-';
+    sEl.classList.add('empty');
+    sSub.textContent = '';
+  }
+
+  // 純アル: 昨日のデータ (前夜の飲酒)
+  const dpg = (allData.alcohol && allData.alcohol.dailyPureG) || {};
+  const alG = dpg[yesterday];
+  const aEl = document.getElementById('axAlcohol');
+  const aSub = document.getElementById('axAlcoholSub');
+  if (alG != null) {
+    aEl.innerHTML = `${alG}<span class="unit">g</span>`;
+    aEl.classList.remove('empty');
+    let label;
+    if (alG === 0) label = '♥️ 休肝';
+    else if (alG <= 20) label = '😊 適量';
+    else if (alG <= 40) label = '😞 やや過ぎ';
+    else if (alG <= 60) label = '😟 過ぎ';
+    else label = '💀 危険';
+    aSub.textContent = `${ydMD} ${label}`;
+  } else {
+    aEl.textContent = '未入力';
+    aEl.classList.add('empty');
+    aSub.textContent = `${ydMD}`;
+  }
+
+  // 支出: 昨日のデータ
+  const entries = (allData.kakeibo && allData.kakeibo.entries) || [];
+  const ydExp = entries.filter(e => e.date === yesterday && e.type === 'expense').reduce((s,e)=>s+e.amount, 0);
+  const eEl = document.getElementById('axExpense');
+  const eSub = document.getElementById('axExpenseSub');
+  if (ydExp > 0) {
+    eEl.textContent = fmtYen(ydExp);
+    eEl.classList.remove('empty');
+    const ydDow = ydDate.getDay();
+    const budget = (ydDow === 0 || ydDow === 6) ? KAKEIBO_WE_BUDGET : KAKEIBO_WD_BUDGET;
+    const heart = ydExp <= budget ? '♥️ ' : '';
+    eSub.textContent = `${ydMD} ${heart}¥${budget.toLocaleString()}${ydExp <= budget ? '内' : '超'}`;
+  } else {
+    eEl.textContent = '¥0';
+    eEl.classList.add('empty');
+    eSub.textContent = `${ydMD}`;
+  }
+}
+function td_dow() { return new Date().getDay(); }
+
+function trendArrow(curr, prev, badIsUp) {
+  // curr/prev: 直近/その前期間の平均値
+  // badIsUp: true なら値増加が「悪い」(酒・支出など)
+  if (curr == null || prev == null || prev === 0) return { arrow: '', pct: '' };
+  const pct = (curr - prev) / prev * 100;
+  let arrow;
+  const abs = Math.abs(pct);
+  if (abs < 5) arrow = '→';
+  else if (abs < 20) arrow = pct > 0 ? '↑' : '↓';
+  else arrow = pct > 0 ? '↑↑' : '↓↓';
+  return { arrow, pct: ` ${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%` };
+}
+
+function renderMA() {
+  // 30日平均: 純アル (dailyPureG ベース、過去30日 + その前30日 で前比)
+  const today = new Date();
+  const dpg = (allData.alcohol && allData.alcohol.dailyPureG) || {};
+  let alSum = 0, alN = 0, alPrevSum = 0, alPrevN = 0;
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (dpg[key] != null) { alSum += dpg[key]; alN++; }
+  }
+  for (let i = 30; i < 60; i++) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (dpg[key] != null) { alPrevSum += dpg[key]; alPrevN++; }
+  }
+  const alAvg = alN > 0 ? alSum / alN : null;
+  const alPrev = alPrevN > 0 ? alPrevSum / alPrevN : null;
+  const maAlcEl = document.getElementById('maAlcG');
+  const maAlcSub = document.getElementById('maAlcSub');
+  if (alAvg != null) {
+    const t = trendArrow(alAvg, alPrev, true);
+    const arrowColor = !t.arrow ? '' :
+      (t.arrow.startsWith('↑') ? 'color:#FF6B6B' :
+       t.arrow.startsWith('↓') ? 'color:#4CAF50' : 'color:#6e6e73');
+    maAlcEl.innerHTML = `${alAvg.toFixed(1)} g <span style="font-size:14px;${arrowColor}">${t.arrow}</span>`;
+    maAlcEl.className = 'ma-value';
+    maAlcSub.textContent = `月換算 ${Math.round(alAvg * 30)}g (n=${alN}/30日,${t.pct})`;
+  } else {
+    maAlcEl.textContent = '-';
+    maAlcSub.textContent = '';
+  }
+
+  // 30日平均 支出 (平日のみ: 週末は奥さんとの食事で金額が大きく代表値が歪むため除外)
+  const entries = (allData.kakeibo && allData.kakeibo.entries) || [];
+  const weekday30 = new Set();   // 過去30日のうち平日(月〜金)
+  let weekdayWindow = 0;         // 過去30日に含まれる平日の総数(分母)
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dow = d.getDay();      // 0=日, 6=土
+    if (dow === 0 || dow === 6) continue;
+    weekdayWindow++;
+    weekday30.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  const expPerDay = {};
+  entries.filter(e => e.type === 'expense' && weekday30.has(e.date)).forEach(e => {
+    expPerDay[e.date] = (expPerDay[e.date] || 0) + e.amount;
+  });
+  const expN = Object.keys(expPerDay).length;
+  const expSum = Object.values(expPerDay).reduce((s, v) => s + v, 0);
+  const expAvg = expN > 0 ? expSum / expN : 0;
+  // 前30日 (= 30-60日前) の平日支出
+  const weekday60 = new Set();
+  let weekdayPrevWindow = 0;
+  for (let i = 30; i < 60; i++) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) continue;
+    weekdayPrevWindow++;
+    weekday60.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  const expPrevPerDay = {};
+  entries.filter(e => e.type === 'expense' && weekday60.has(e.date)).forEach(e => {
+    expPrevPerDay[e.date] = (expPrevPerDay[e.date] || 0) + e.amount;
+  });
+  const expPrevN = Object.keys(expPrevPerDay).length;
+  const expPrevSum = Object.values(expPrevPerDay).reduce((s, v) => s + v, 0);
+  const expPrev = expPrevN > 0 ? expPrevSum / expPrevN : null;
+  // 月換算は平日ベース: 1ヶ月の平日数 ≈ 30 × 5/7 ≈ 21.4日
+  const WEEKDAYS_PER_MONTH = 30 * 5 / 7;
+  const maExpEl = document.getElementById('maExp');
+  const maExpSub = document.getElementById('maExpSub');
+  if (expN > 0) {
+    const t = trendArrow(expAvg, expPrev, true);
+    const arrowColor = !t.arrow ? '' :
+      (t.arrow.startsWith('↑') ? 'color:#FF6B6B' :
+       t.arrow.startsWith('↓') ? 'color:#4CAF50' : 'color:#6e6e73');
+    maExpEl.innerHTML = `${fmtYen(Math.round(expAvg))} <span style="font-size:14px;${arrowColor}">${t.arrow}</span>`;
+    maExpSub.textContent = `月換算 ${fmtYen(Math.round(expAvg * WEEKDAYS_PER_MONTH))} (平日 n=${expN}/${weekdayWindow}日,${t.pct})`;
+  } else {
+    maExpEl.textContent = '-';
+    maExpSub.textContent = '';
+  }
+}
+
+function renderHiitRing() {
+  const sessions = (allData.hiit && allData.hiit.sessions) || [];
+  const today = new Date();
+  const ym = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const monthSess = sessions.filter(s => s.date && s.date.startsWith(ym));
+  // HIIT 最終日 (sessions は parseHiitFromCsv で HIIT のみ抽出済)
+  const allDates = sessions.map(s => s.date).filter(Boolean).sort();
+  const latestHiitDate = allDates.length > 0 ? allDates[allDates.length - 1] : null;
+
+  // Z5 はキャッシュ済みの hiit_hr_zones_*.json (activity_id → z5_sec) から実値で集計
+  const zoneCache = (allData.hiit && allData.hiit.zoneCache) || {};
+  const sessionCount = monthSess.length;
+  const z5MinList = monthSess.map(s => (zoneCache[s.activity_id] || 0) / 60);
+  const estZ5Total = z5MinList.reduce((a, b) => a + b, 0);
+  const winCount = z5MinList.filter(m => m >= 18).length;
+  const maxZ5 = z5MinList.length > 0 ? Math.max(0, ...z5MinList) : 0;
+
+  const avgPerSession = sessionCount > 0 ? estZ5Total / sessionCount : 0;
+  const ratio = Math.min(avgPerSession / HIIT_Z5_GOAL_MIN, 1);
+  const circumference = 2 * Math.PI * 50;
+  const offset = circumference * (1 - ratio);
+  const ringFg = document.getElementById('ringFg');
+  ringFg.setAttribute('stroke-dashoffset', offset);
+  ringFg.setAttribute('class', 'ring-fg ' + (ratio >= 1 ? 'full' : (ratio >= 0.8 ? 'gold' : '')));
+
+  if (sessionCount === 0) {
+    // 今月セッション0回 → 最新セッションの情報を表示
+    const latest = allData.hiit.latestSession;
+    if (latest) {
+      const latestZ5Min = latest.z5_sec / 60;
+      const latestRatio = Math.min(latestZ5Min / HIIT_Z5_GOAL_MIN, 1);
+      ringFg.setAttribute('stroke-dashoffset', circumference * (1 - latestRatio));
+      ringFg.setAttribute('class', 'ring-fg ' + (latestRatio >= 1 ? 'full' : (latestRatio >= 0.8 ? 'gold' : '')));
+      document.getElementById('ringNum').textContent = latestZ5Min.toFixed(1);
+      // ラベルも書き換え (今月集計→最新セッション)
+      const lblEls = document.querySelectorAll('.hiit-info .info-row .lbl');
+      const valEls = document.querySelectorAll('.hiit-info .info-row .val');
+      lblEls[0].textContent = '今月セッション';
+      valEls[0].textContent = '0回';
+      lblEls[1].textContent = '最新HIIT日';
+      valEls[1].textContent = latest.date.slice(5).replace('-', '/');
+      lblEls[2].textContent = '最新Z5';
+      valEls[2].textContent = `${latestZ5Min.toFixed(1)}分`;
+      lblEls[3].textContent = '最新平均HR';
+      valEls[3].textContent = `${Math.round(latest.avg_hr)}`;
+    } else {
+      document.getElementById('ringNum').textContent = '0';
+      document.getElementById('hiitAvg').textContent = latestHiitDate ? `HIIT最終日: ${latestHiitDate.slice(5).replace('-', '/')}` : 'HIIT記録なし';
+      document.getElementById('hiitWin').textContent = '-';
+      document.getElementById('hiitMax').textContent = '-';
+      document.getElementById('hiitLatestZ5').textContent = '-';
+    }
+  } else {
+    // 月集計表示 (ラベルを HTML 初期値に戻す)
+    const lblEls = document.querySelectorAll('.hiit-info .info-row .lbl');
+    lblEls[0].textContent = 'Z5 平均時間';
+    lblEls[1].textContent = 'Z5🔥(18分-) 回数';
+    lblEls[3].textContent = '最大 Z5';
+    document.getElementById('ringNum').textContent = avgPerSession.toFixed(1);
+    document.getElementById('hiitAvg').textContent = `${avgPerSession.toFixed(1)}分 (${sessionCount}回)`;
+    document.getElementById('hiitWin').textContent = `${winCount}回`;
+    document.getElementById('hiitMax').textContent = `${maxZ5.toFixed(1)}分`;
+    // 最新HIIT の Z5 (実値) を3行目に表示
+    const latestSess = allData.hiit.latestSession;
+    if (latestSess) {
+      const latestZ5Min = (latestSess.z5_sec || 0) / 60;
+      lblEls[2].textContent = `最新 Z5 (${latestSess.date.slice(5).replace('-','/')})`;
+      document.getElementById('hiitLatestZ5').textContent = `${latestZ5Min.toFixed(1)}分`;
+    } else {
+      lblEls[2].textContent = '最新 Z5';
+      document.getElementById('hiitLatestZ5').textContent = '-';
+    }
+  }
+}
+
+// ===== PAT modal =====
+function openPatModal() {
+  document.getElementById('patInput').value = getPat();
+  document.getElementById('patModal').classList.add('open');
+}
+function closePatModal() {
+  document.getElementById('patModal').classList.remove('open');
+}
+function savePat() {
+  const v = document.getElementById('patInput').value.trim();
+  if (v) setPat(v);
+  closePatModal();
+  reloadAll();
+}
+
+// ===== 疲労インジケータ (§31-A57) =====
+function rollingMean(arr, n) {
+  // 末尾 n 件の平均 (null除外)
+  const vals = arr.filter(v => v != null);
+  if (vals.length < Math.min(n, 5)) return null;
+  const slice = vals.slice(-n);
+  return slice.reduce((a,b) => a+b, 0) / slice.length;
+}
+function setJudge(elId, detailId, judge, cls, detail) {
+  const el = document.getElementById(elId);
+  el.textContent = judge;
+  el.className = 'fat-judge ' + cls;
+  document.getElementById(detailId).textContent = detail;
+}
+function renderFatigueIndicator() {
+  // ---- Body Battery MAX MA7 vs MA30 ----
+  const series = (allData.garmin && allData.garmin.series) || [];
+  const bbVals = series.map(s => s.bb_max);
+  const rhrVals = series.map(s => s.rhr);
+  const bbMa7 = rollingMean(bbVals, 7);
+  const bbMa30 = rollingMean(bbVals, 30);
+  if (bbMa7 != null && bbMa30 != null) {
+    // 末尾から逆順に「BB MA7 < MA30」連続日数を数える
+    let consec = 0;
+    for (let i = series.length - 1; i >= 0; i--) {
+      const slice7 = bbVals.slice(Math.max(0, i-6), i+1).filter(v => v != null);
+      const slice30 = bbVals.slice(Math.max(0, i-29), i+1).filter(v => v != null);
+      if (slice7.length < 5 || slice30.length < 20) break;
+      const m7 = slice7.reduce((a,b)=>a+b,0)/slice7.length;
+      const m30 = slice30.reduce((a,b)=>a+b,0)/slice30.length;
+      if (m7 < m30) consec++; else break;
+    }
+    let judge, cls;
+    if (consec >= 5) { judge = '🚨 疲労蓄積'; cls = 'danger'; }
+    else if (consec >= 3) { judge = '🟠 蓄積疑い'; cls = 'alert'; }
+    else if (consec >= 1) { judge = '🟡 注意'; cls = 'warn'; }
+    else { judge = '🟢 平常'; cls = 'ok'; }
+    setJudge('fatBb', 'fatBbDetail', judge, cls,
+      `MA7 ${bbMa7.toFixed(1)} / MA30 ${bbMa30.toFixed(1)} (連続${consec}日)`);
+  } else {
+    setJudge('fatBb', 'fatBbDetail', '-', '', 'データ不足');
+  }
+
+  // ---- RHR MA7 vs MA30 (高いほど疲労) ----
+  const rhrMa7 = rollingMean(rhrVals, 7);
+  const rhrMa30 = rollingMean(rhrVals, 30);
+  if (rhrMa7 != null && rhrMa30 != null) {
+    let consec = 0;
+    for (let i = series.length - 1; i >= 0; i--) {
+      const slice7 = rhrVals.slice(Math.max(0, i-6), i+1).filter(v => v != null);
+      const slice30 = rhrVals.slice(Math.max(0, i-29), i+1).filter(v => v != null);
+      if (slice7.length < 5 || slice30.length < 20) break;
+      const m7 = slice7.reduce((a,b)=>a+b,0)/slice7.length;
+      const m30 = slice30.reduce((a,b)=>a+b,0)/slice30.length;
+      if (m7 > m30) consec++; else break;
+    }
+    let judge, cls;
+    if (consec >= 5) { judge = '🚨 疲労蓄積'; cls = 'danger'; }
+    else if (consec >= 3) { judge = '🟠 蓄積疑い'; cls = 'alert'; }
+    else if (consec >= 1) { judge = '🟡 注意'; cls = 'warn'; }
+    else { judge = '🟢 平常'; cls = 'ok'; }
+    setJudge('fatRhr', 'fatRhrDetail', judge, cls,
+      `MA7 ${rhrMa7.toFixed(1)} / MA30 ${rhrMa30.toFixed(1)} (連続${consec}日)`);
+  } else {
+    setJudge('fatRhr', 'fatRhrDetail', '-', '', 'データ不足');
+  }
+  // ^o^ / *_* 直近30日 行は絶好調インジと重複のため削除 (ぽっち🌟さん指示)
+}
+
+// ===== 絶好調インジ (§31-A72: 主観^o^率 × 客観 rate_80 4象限) =====
+// 中央値: §A72-5 で算出した n=42月 の中央値を閾値に採用 (固定)
+const ZEKKO_RATE80_MEDIAN = 3.3;   // %
+const ZEKKO_HO_MEDIAN = 10.7;      // %
+function renderZekkocho() {
+  const series = (allData.garmin && allData.garmin.series) || [];
+  const gk = allData.gokigen || {};
+
+  // (1) 直近30日 rate_80
+  const last30 = series.slice(-30);
+  const sc30 = last30.filter(s => s.sleep_score != null);
+  const n80_30 = sc30.filter(s => s.sleep_score >= 80).length;
+  const rate80_30 = sc30.length > 0 ? n80_30 / sc30.length * 100 : null;
+
+  // (2) 直近30日 ^o^率
+  const today = new Date();
+  let hoCount = 0, hoDays = 0;
+  for (let d = 0; d < 30; d++) {
+    const dt = new Date(today); dt.setDate(dt.getDate() - d);
+    const ds = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    const rec = gk[ds];
+    if (rec && rec.emoji) {
+      hoDays++;
+      if (EMOJI_SCORE[rec.emoji] === 5) hoCount++;
+    }
+  }
+  const hoRate30 = hoDays > 0 ? hoCount / hoDays * 100 : null;
+
+  // セル更新
+  const rate80El = document.getElementById('zekkoRate80');
+  const rate80Sub = document.getElementById('zekkoRate80Sub');
+  if (rate80_30 != null) {
+    rate80El.textContent = `${rate80_30.toFixed(1)}%`;
+    rate80Sub.textContent = `${n80_30}日 / ${sc30.length}日 有効`;
+  } else {
+    rate80El.textContent = '-';
+    rate80Sub.textContent = 'データ不足';
+  }
+  const hoEl = document.getElementById('zekkoHo');
+  const hoSub = document.getElementById('zekkoHoSub');
+  if (hoRate30 != null) {
+    hoEl.textContent = `${hoRate30.toFixed(1)}%`;
+    hoSub.textContent = `${hoCount}回 / ${hoDays}日記録`;
+  } else {
+    hoEl.textContent = '-';
+    hoSub.textContent = 'データ不足';
+  }
+
+  // (3) 4象限判定
+  const quadEl = document.getElementById('zekkoQuad');
+  if (rate80_30 != null && hoRate30 != null) {
+    const r80hi = rate80_30 >= ZEKKO_RATE80_MEDIAN;
+    const hoHi = hoRate30 >= ZEKKO_HO_MEDIAN;
+    let label, sub, cls;
+    if (r80hi && hoHi) {
+      label = '🌟 Q1: 理想型 (主観高×客観高)';
+      sub = '^o^高+客観80超高';
+      cls = 'q1';
+    } else if (hoHi && !r80hi) {
+      label = '🙂 Q2: 主観だけ高';
+      sub = '主観^o^は出てるが客観体調未追従';
+      cls = 'q2';
+    } else if (!hoHi && r80hi) {
+      label = '🚨 Q3: メンタル先行乖離型';
+      sub = '身体は絶好調なのにメンタル沈み (§A61) — 状況性ストレス対応推奨';
+      cls = 'q3';
+    } else {
+      label = '🕳 Q4: 両低 (暗黒)';
+      sub = '行動健全化が必要 (休肝日↑/睡眠時間↑)';
+      cls = 'q4';
+    }
+    quadEl.textContent = label;
+    quadEl.className = 'zekko-quad ' + cls;
+    const subDiv = document.createElement('div');
+    subDiv.className = 'q-sub';
+    subDiv.textContent = sub;
+    quadEl.appendChild(subDiv);
+  } else {
+    quadEl.textContent = '判定不能';
+    quadEl.className = 'zekko-quad';
+  }
+
+  // (4) 今月の rate_80 + 着地予測
+  const ym = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const todayDay = today.getDate();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
+  const monthSeries = series.filter(s => s.date.startsWith(ym) && s.sleep_score != null);
+  const n80_month = monthSeries.filter(s => s.sleep_score >= 80).length;
+  const monthValEl = document.getElementById('zekkoMonthVal');
+  const monthPredEl = document.getElementById('zekkoMonthPred');
+  if (monthSeries.length > 0) {
+    const cur_rate = n80_month / monthSeries.length * 100;
+    monthValEl.textContent = `${n80_month}日 / ${monthSeries.length}日 (${cur_rate.toFixed(1)}%)`;
+    // 着地予測: 今のペース × 月日数 (簡易線形外挿)
+    const pace = n80_month / monthSeries.length;
+    const projected = Math.round(pace * daysInMonth);
+    monthPredEl.textContent = `→ 着地予測 ${projected}日`;
+  } else {
+    monthValEl.textContent = '-';
+    monthPredEl.textContent = '';
+  }
+
+  // (5) 過去6ヶ月 rate_80 推移
+  const histEl = document.getElementById('zekkoHist');
+  histEl.innerHTML = '';
+  const monthBuckets = {};
+  for (const s of series) {
+    if (s.sleep_score == null) continue;
+    const mkey = s.date.slice(0, 7);
+    if (!monthBuckets[mkey]) monthBuckets[mkey] = { n: 0, n80: 0 };
+    monthBuckets[mkey].n++;
+    if (s.sleep_score >= 80) monthBuckets[mkey].n80++;
+  }
+  // 過去6ヶ月 (今月含む)
+  const histMonths = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const mk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const b = monthBuckets[mk] || { n: 0, n80: 0 };
+    const rate = b.n > 0 ? b.n80 / b.n * 100 : 0;
+    histMonths.push({ ym: mk, rate, n: b.n, n80: b.n80 });
+  }
+  const maxRate = Math.max(...histMonths.map(m => m.rate), 10);  // 最低スケール10%
+  for (const m of histMonths) {
+    const row = document.createElement('div');
+    row.className = 'zekko-hist-row';
+    const ymShort = m.ym.slice(2);  // "25-12" 形式
+    const widthPct = (m.rate / maxRate) * 100;
+    const zero = m.rate === 0 ? 'zero' : '';
+    row.innerHTML = `
+      <div class="zh-ym">${ymShort}</div>
+      <div class="zh-bar"><div class="zh-bar-fill ${zero}" style="width:${widthPct}%"></div></div>
+      <div class="zh-val">${m.rate.toFixed(1)}%</div>
+    `;
+    histEl.appendChild(row);
+  }
+}
+
+// ===== 今月の進捗 / 月末着地予測 (§31-A60) =====
+function renderMonthProgress() {
+  const today = new Date();
+  const ym = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const todayDay = today.getDate();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
+  const remaining = daysInMonth - todayDay;
+
+  // (1) BB MAX 直近30日平均 (累計表示は廃止、ぽっち🌟さん指示)
+  const series = (allData.garmin && allData.garmin.series) || [];
+  const past30Bb = series.slice(-30).filter(s => s.bb_max != null).map(s => s.bb_max);
+  if (past30Bb.length > 0) {
+    const recentMean = past30Bb.reduce((a,b)=>a+b,0) / past30Bb.length;
+    // 警告フラグは日次平均基準: 黄金期相当 43+、平常 33+、警告未満
+    let judge, cls;
+    if (recentMean >= 43) { judge = '🟢 絶好調コース'; cls = 'ok'; }
+    else if (recentMean >= 33) { judge = '🟡 平常コース'; cls = 'warn'; }
+    else { judge = '🚨 警告コース'; cls = 'alert'; }
+    document.getElementById('progBbCur').textContent = `${recentMean.toFixed(1)}/日`;
+    document.getElementById('progBbSub').innerHTML = `<span style="opacity:0.7">直近30日 n=${past30Bb.length}</span>`;
+    const je = document.getElementById('progBbJudge');
+    je.textContent = judge;
+    je.className = 'p-judge ' + cls;
+  } else {
+    document.getElementById('progBbCur').textContent = '-';
+    document.getElementById('progBbSub').textContent = 'データなし';
+    document.getElementById('progBbJudge').textContent = '';
+  }
+
+  // (2) アルコール 月累計 (g + 杯換算 20g/杯)、直近30日平均ベース
+  const dpg = (allData.alcohol && allData.alcohol.dailyPureG) || {};
+  let alcGSum = 0, alcDays = 0;
+  for (let d = 1; d <= todayDay; d++) {
+    const key = `${ym}-${String(d).padStart(2,'0')}`;
+    if (dpg[key] != null) {
+      alcGSum += dpg[key];
+      alcDays++;
+    }
+  }
+  // 過去30日のdailyPureG平均 (記録ある日のみ、直近トレンドと同ロジック)
+  const past30G = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (dpg[key] != null) past30G.push(dpg[key]);
+  }
+  if (alcDays > 0 && past30G.length > 0) {
+    const cupSum = alcGSum / 20;
+    const recentMean = past30G.reduce((a,b)=>a+b,0) / past30G.length;
+    const projG = alcGSum + recentMean * remaining;
+    const projCup = projG / 20;
+    let judge, cls;
+    if (projCup < 60) { judge = '🟢 控えめコース'; cls = 'ok'; }
+    else if (projCup < 80) { judge = '🟡 平常コース'; cls = 'warn'; }
+    else { judge = '🚨 飲み過ぎコース'; cls = 'alert'; }
+    document.getElementById('progAlcCur').textContent = `${cupSum.toFixed(1)}杯 / ${Math.round(alcGSum)}g`;
+    document.getElementById('progAlcSub').innerHTML = `月末着地: <b>${projCup.toFixed(0)}杯</b> (${Math.round(projG)}g)<br><span style="opacity:0.7">直近30日平均: ${recentMean.toFixed(1)}g/日 (n=${past30G.length})</span>`;
+    const je = document.getElementById('progAlcJudge');
+    je.textContent = judge;
+    je.className = 'p-judge ' + cls;
+
+    // §A63「4杯閾値」可視化: 今月4+杯日カウンタ + 4杯目アラート
+    let fourPlusDays = 0, sixPlusDays = 0;
+    for (let d = 1; d <= todayDay; d++) {
+      const key = `${ym}-${String(d).padStart(2,'0')}`;
+      const g = dpg[key];
+      if (g == null) continue;
+      const cups = g / 20;
+      if (cups >= 4) fourPlusDays++;
+      if (cups >= 6) sixPlusDays++;
+    }
+    const todayKey = `${ym}-${String(todayDay).padStart(2,'0')}`;
+    const todayG = dpg[todayKey] || 0;
+    const todayCup = todayG / 20;
+    let alertText, alertCls;
+    if (todayG === 0) {
+      alertText = `🍃 今日: 休肝 / 今月 4+杯日 <b>${fourPlusDays}日</b> (6+杯 ${sixPlusDays}日)`;
+      alertCls = 'ok';
+    } else if (todayCup < 3) {
+      alertText = `🍶 今日: ${todayCup.toFixed(1)}杯 / 今月 4+杯日 <b>${fourPlusDays}日</b>`;
+      alertCls = 'ok';
+    } else if (todayCup < 4) {
+      alertText = `⚠️ 今日: ${todayCup.toFixed(1)}杯 — 4杯目で重量モード突入注意`;
+      alertCls = 'warn';
+    } else if (todayCup < 6) {
+      alertText = `🚨 今日: ${todayCup.toFixed(1)}杯 (重量モード) / 今月4+杯 <b>${fourPlusDays}日目</b>`;
+      alertCls = 'alert';
+    } else {
+      alertText = `💀 今日: ${todayCup.toFixed(1)}杯 (緊急麻酔) / 今月6+杯 <b>${sixPlusDays}日目</b>`;
+      alertCls = 'alert';
+    }
+    const ext = document.getElementById('progAlcExtra');
+    ext.innerHTML = alertText;
+    ext.className = 'p-extra ' + alertCls;
+  } else {
+    document.getElementById('progAlcCur').textContent = '-';
+    document.getElementById('progAlcSub').textContent = 'データなし';
+    document.getElementById('progAlcJudge').textContent = '';
+  }
+}
+
+// ===== 言語ヘルス (§31-A64) =====
+function parseLangFromCsv(csv) {
+  const lines = csv.trim().split('\n');
+  const header = lines[0].split(',');
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(',');
+    const r = {};
+    header.forEach((h, j) => { r[h] = c[j]; });
+    rows.push(r);
+  }
+  return rows;
+}
+function renderLang() {
+  const grid = document.getElementById('langGrid');
+  if (!grid) return;
+  const rows = allData.lang || [];
+  if (rows.length === 0) { grid.innerHTML = '<div style="font-size:12px;color:#999;padding:12px">データ取得失敗</div>'; return; }
+  // 直近月 (CSVの最終行)
+  const latest = rows[rows.length-1];
+  // 全期間統計 (今月との比較用)
+  const all_nchar = rows.map(r => parseFloat(r.avg_nchar)).filter(v => !isNaN(v));
+  const all_mayu = rows.map(r => parseFloat(r['まゆ_rate'])).filter(v => !isNaN(v));
+  const all_zetsubo = rows.map(r => parseFloat(r['絶望_rate'])).filter(v => !isNaN(v));
+  const med_nchar = all_nchar.sort((a,b)=>a-b)[Math.floor(all_nchar.length/2)];
+  const max_zetsubo = Math.max(...all_zetsubo);
+  // セル
+  const cells = [
+    {
+      label: '✍️ 今月発信',
+      val: `${latest.n}件`,
+      sub: `Twitter ${latest.twitter_n} / Journal ${latest.journal_n}`,
+      cls: parseInt(latest.n) < 20 ? 'warn' : ''
+    },
+    {
+      label: '📏 平均文字数',
+      val: `${parseFloat(latest.avg_nchar).toFixed(0)} 字`,
+      sub: `全期間中央 ${med_nchar.toFixed(0)}字`,
+      cls: parseFloat(latest.avg_nchar) < 30 ? 'alert' : (parseFloat(latest.avg_nchar) < 40 ? 'warn' : '')
+    },
+    {
+      label: '🚨 絶望言及',
+      val: `${parseFloat(latest['絶望_rate']).toFixed(1)}%`,
+      sub: `歴代最高 ${max_zetsubo.toFixed(1)}%`,
+      cls: parseFloat(latest['絶望_rate']) > 12 ? 'alert' : (parseFloat(latest['絶望_rate']) > 8 ? 'warn' : '')
+    },
+    {
+      label: '🚨 まゆ言及',
+      val: `${parseFloat(latest['まゆ_rate']).toFixed(1)}%`,
+      sub: 'Relatedness ゲージ',
+      cls: parseFloat(latest['まゆ_rate']) < 0.5 ? 'alert' : ''
+    },
+    {
+      label: '⚠️ 転職言及',
+      val: `${parseFloat(latest['転職_rate']).toFixed(1)}%`,
+      sub: '状況性ストレス',
+      cls: parseFloat(latest['転職_rate']) > 5 ? 'alert' : ''
+    },
+    {
+      label: '⚠️ 希望言及 (代償)',
+      val: `${parseFloat(latest['希望_rate']).toFixed(1)}%`,
+      sub: 'メンタル低下サイン',
+      cls: parseFloat(latest['希望_rate']) > 8 ? 'warn' : ''
+    },
+  ];
+  grid.innerHTML = cells.map(c => `<div class="lang-cell ${c.cls}">
+    <div class="l-label">${c.label}</div>
+    <div class="l-val">${c.val}</div>
+    <div class="l-sub">${c.sub}</div>
+  </div>`).join('');
+}
+
+// ===== 健診ダッシュボード (§31-A59) =====
+const KENSHIN_ITEMS = [
+  // [item, 単位, 増加方向の判定 (up_bad=高くなると悪い / down_bad=低くなると悪い / neutral), 警戒ライン (注目絞り込み用)]
+  ['中性脂肪', 'mg/dl', 'up_bad', 150],
+  ['ALT', 'U/l', 'up_bad', 30],
+  ['AST', 'U/l', 'up_bad', 30],
+  ['γ-GTP', 'U/l', 'up_bad', 50],
+  ['HDL', 'mg/dl', 'down_bad', 40],
+  ['LDL', 'mg/dl', 'up_bad', 119],
+  ['空腹時血糖', 'mg/dl', 'up_bad', 99],
+  ['HbA1c', '%', 'up_bad', 5.5],
+  ['収縮期血圧', 'mmHg', 'up_bad', 129],
+  ['BMI', '', 'neutral', null],
+  ['体重', 'kg', 'neutral', null],
+  ['腹囲', 'cm', 'up_bad', 84.9],
+];
+// 注目フィルタ判定: 直近値が警戒ラインを超え (up_bad) または下回り (down_bad)
+function isKenshinFocus(item, dir, threshold, latest) {
+  if (threshold == null || latest == null) return false;
+  if (dir === 'up_bad') return latest >= threshold;
+  if (dir === 'down_bad') return latest <= threshold;
+  return false;
+}
+function sparkSvg(values, badIsUp) {
+  if (!values || values.length < 2) return '';
+  const w = 60, h = 22, pad = 2;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const points = values.map((v, i) => {
+    const x = pad + (w - 2 * pad) * i / (values.length - 1);
+    const y = h - pad - (h - 2 * pad) * (v - min) / range;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  // 最後の値 vs 前の値で色
+  const lastDelta = values[values.length - 1] - values[values.length - 2];
+  let color = '#999';
+  if (Math.abs(lastDelta) > range * 0.05) {
+    const isUp = lastDelta > 0;
+    if (badIsUp === 'up_bad') color = isUp ? '#FF6B6B' : '#4CAF50';
+    else if (badIsUp === 'down_bad') color = isUp ? '#4CAF50' : '#FF6B6B';
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>`;
+}
+function trendArrowSpan(values, badIsUp) {
+  if (!values || values.length < 2) return '<span class="k-arrow flat">-</span>';
+  const last = values[values.length - 1], prev = values[values.length - 2];
+  const range = Math.max(...values) - Math.min(...values) || 1;
+  const delta = last - prev;
+  if (Math.abs(delta) < range * 0.05) return '<span class="k-arrow flat">→</span>';
+  const up = delta > 0;
+  let cls = 'flat', sym = up ? '↑' : '↓';
+  if (badIsUp === 'up_bad') cls = up ? 'up-bad' : 'down-good';
+  else if (badIsUp === 'down_bad') cls = up ? 'down-good' : 'up-bad';
+  return `<span class="k-arrow ${cls}">${sym}</span>`;
+}
+function renderKenshin() {
+  const k = allData.kenshin || {};
+  const hlEl = document.getElementById('kenshinHighlights');
+  const listEl = document.getElementById('kenshinList');
+  if (!hlEl || !listEl) return;
+
+  // 注目改善カード: 中性脂肪 と ALT
+  const highlights = [
+    { item: '中性脂肪', emoji: '💪', label: '中性脂肪 (TG)' },
+    { item: 'ALT', emoji: '🍺', label: 'ALT (肝)' },
+  ];
+  hlEl.innerHTML = highlights.map(h => {
+    const data = k[h.item];
+    if (!data || data.length < 2) return '';
+    const oldest = data[0], latest = data[data.length - 1];
+    const delta = latest.value - oldest.value;
+    const sym = delta > 0 ? '↑' : (delta < 0 ? '↓' : '→');
+    const years = (new Date(latest.date) - new Date(oldest.date)) / (365.25 * 86400000);
+    return `<div class="kenshin-hl">
+      <div class="hl-item">${h.emoji} ${h.label}</div>
+      <div class="hl-val">
+        <span class="hl-old">${oldest.value}</span>
+        <span class="hl-arrow">${sym}${sym}</span>
+        <span class="hl-new">${latest.value}</span>
+      </div>
+      <div class="hl-delta">${years.toFixed(0)}年で ${delta >= 0 ? '+' : ''}${delta.toFixed(0)} (${oldest.date.slice(0,7)} → ${latest.date.slice(0,7)})</div>
+    </div>`;
+  }).join('');
+
+  // フィルタトグル状態 (localStorage 永続化)
+  const focusOnly = localStorage.getItem('kenshinFocusOnly') === '1';
+  const rows = KENSHIN_ITEMS.map(([item, unit, dir, threshold]) => {
+    const data = k[item] || [];
+    const values = data.map(d => d.value);
+    if (values.length === 0) return null;
+    const last = values[values.length - 1];
+    const focus = isKenshinFocus(item, dir, threshold, last);
+    return { item, unit, dir, threshold, values, last, focus };
+  }).filter(x => x !== null);
+  const focusCount = rows.filter(r => r.focus).length;
+  const totalCount = rows.length;
+  const visibleRows = focusOnly ? rows.filter(r => r.focus) : rows;
+
+  // トグルボタン + リスト
+  const toggleBtnHtml = `<div class="kenshin-filter-bar">
+    <button class="kfilter-btn ${focusOnly ? 'active' : ''}" id="kFocusBtn">
+      📌 注目だけ (${focusCount})
+    </button>
+    <button class="kfilter-btn ${!focusOnly ? 'active' : ''}" id="kAllBtn">
+      📋 全部 (${totalCount})
+    </button>
+  </div>`;
+
+  const listHtml = visibleRows.map(({item, unit, dir, threshold, values, last, focus}) => {
+    const focusBadge = focus ? '<span class="k-focus-badge">⚠️</span>' : '';
+    return `<div class="kenshin-row${focus ? ' focus' : ''}">
+      <div class="k-label">${item}${focusBadge}</div>
+      <div class="k-spark">${sparkSvg(values, dir)}</div>
+      <div class="k-val">${last}${unit ? ' ' + unit : ''}</div>
+      ${trendArrowSpan(values, dir)}
+    </div>`;
+  }).join('');
+
+  listEl.innerHTML = toggleBtnHtml + listHtml;
+  // イベント
+  const focusBtn = document.getElementById('kFocusBtn');
+  const allBtn = document.getElementById('kAllBtn');
+  if (focusBtn) focusBtn.onclick = () => { localStorage.setItem('kenshinFocusOnly', '1'); renderKenshin(); };
+  if (allBtn) allBtn.onclick = () => { localStorage.setItem('kenshinFocusOnly', '0'); renderKenshin(); };
+
+  renderKenshinWeight20(k);
+  // §A78 以降、将来予測セクションは削除 (ぽっち🌟さん指示)
+}
+
+function renderKenshinWeight20(k) {
+  const el = document.getElementById('kenshinWeight20');
+  if (!el) return;
+  const w = k['体重'] || [];
+  const b = k['BMI'] || [];
+  if (w.length < 3) { el.innerHTML = ''; return; }
+  const bmiByDate = {};
+  b.forEach(x => { bmiByDate[x.date] = x.value; });
+  const events = {
+    // §A78 で 2011 TG200 は OCR 誤読と判明 (真値67、基準内) → イベント注釈削除 (ぽっち🌟さん指示)
+    '2021-07-06': '10年で内臓脂肪化',
+    '2025-04-16': '代謝ファースト後安定',
+  };
+  const bolds = new Set(['2021-07-06']);
+  function ageAt(dateStr) {
+    const d = new Date(dateStr);
+    const birth = new Date('1976-11-27');
+    return Math.floor((d - birth) / (365.25 * 86400000));
+  }
+  let html = `<div class="kenshin-weight20-title">📜 体重 20年経年</div>`;
+  html += `<div class="w20-row head"><div class="w-month">年月</div><div class="w-age">年齢</div><div class="w-weight">体重</div><div class="w-bmi">BMI</div><div class="w-delta">前回比/メモ</div></div>`;
+  let prev = null;
+  w.forEach(row => {
+    const ym = row.date.slice(0, 7);
+    const age = ageAt(row.date);
+    const bmi = bmiByDate[row.date];
+    const delta = prev != null ? (row.value - prev) : null;
+    const deltaStr = delta != null ? `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}` : '—';
+    const deltaCls = delta == null ? '' : (delta > 0.5 ? 'up' : (delta < -0.5 ? 'down' : ''));
+    const note = events[row.date] || '';
+    const rowCls = bolds.has(row.date) ? 'bold' : '';
+    html += `<div class="w20-row ${rowCls}">
+      <div class="w-month">${ym}</div>
+      <div class="w-age">${age}歳</div>
+      <div class="w-weight">${row.value} kg</div>
+      <div class="w-bmi">${bmi != null ? bmi : '—'}</div>
+      <div class="w-delta ${deltaCls}">${deltaStr}${note ? ' ' + note : ''}</div>
+    </div>`;
+    prev = row.value;
+  });
+  el.innerHTML = html;
+}
+
+// 線形回帰
+function linregress(xs, ys) {
+  const n = xs.length;
+  const mx = xs.reduce((a,b)=>a+b,0)/n;
+  const my = ys.reduce((a,b)=>a+b,0)/n;
+  let num = 0, den = 0, sse_y = 0;
+  for (let i = 0; i < n; i++) {
+    num += (xs[i]-mx) * (ys[i]-my);
+    den += (xs[i]-mx) * (xs[i]-mx);
+    sse_y += (ys[i]-my) * (ys[i]-my);
+  }
+  if (den === 0) return null;
+  const slope = num/den;
+  const intercept = my - slope*mx;
+  const r2 = sse_y > 0 ? (num*num)/(den*sse_y) : 0;
+  return { slope, intercept, r2, n };
+}
+// 警戒ライン到達年 (slope!=0 のとき)
+function reachYear(slope, intercept, target) {
+  if (!slope) return null;
+  return intercept + target/slope * 0; // dummy
+}
+
+const FORECAST_TARGETS = [
+  // [item, 単位, 警戒ライン, 警戒ラベル, 方向 (high=ラインを上回ったら警戒 / low=下回ったら警戒)]
+  ['空腹時血糖', 'mg/dl', 110, '要注意', 'high'],
+  ['BMI', '', 25, '過体重', 'high'],
+  ['体重', 'kg', 75, '+3kg', 'high'],
+  ['γ-GTP', '', 50, '基準上限', 'high'],
+  ['LDL', 'mg/dl', 120, '基準上限', 'high'],
+  ['腹囲', 'cm', 90, 'メタボ', 'high'],
+];
+
+// renderKenshinForecast 関数は削除 (ぽっち🌟さん指示、§A78 以降の将来予測セクション全廃)
+
+// 折りたたみ
+document.addEventListener('DOMContentLoaded', () => {
+  const title = document.getElementById('kenshinTitle');
+  const body = document.getElementById('kenshinBody');
+  const tog = document.getElementById('kenshinToggle');
+  if (title && body) {
+    let open = true;
+    title.addEventListener('click', () => {
+      open = !open;
+      body.style.display = open ? '' : 'none';
+      if (tog) tog.textContent = open ? '▼' : '▶';
+    });
+  }
+});
+
+// ===== Init =====
+function init() {
+  const hasCache = loadCache();
+  if (hasCache) {
+    updateStatus(`☁️ キャッシュ (${fmtFetchTime(lastFetch)})`, false);
+    renderAll();
+  }
+  if (getPat()) {
+    reloadAll();
+  } else {
+    updateStatus('⚙️ PAT未設定 → タップして設定', false);
+    setTimeout(() => openPatModal(), 300);
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+}
+
+init();
+</script>
+</body>
+</html>
