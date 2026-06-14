@@ -818,6 +818,26 @@ sync.attachStatusElement(document.getElementById('syncStatusBtn'));
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
+
+// ===== 起動時に repo から読み戻す (空localStorageが空pushで上書きするのを防ぐ / server-wins) =====
+async function initialFetch(){
+  const pat = sync.getPat(); if(!pat) return;
+  try{
+    const url = `https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
+    const res = await fetch(url,{cache:'no-store',headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
+    if(!res.ok) return;
+    const j = await res.json();
+    const remote = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+    if(remote && remote.data && Object.keys(remote.data).length>0){
+      localStorage.setItem('alcohol_data', JSON.stringify(remote));
+      state = loadState();
+      const m = sync.getMeta(); m.sha=j.sha; m.lastSync=Date.now(); m.dirty=false; sync.setMeta(m); sync.updateStatus();
+      render();
+    }
+  }catch(e){ console.warn('initialFetch failed',e); }
+}
+initialFetch();
+
 </script>
 </body>
 </html>
