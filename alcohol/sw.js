@@ -1,4 +1,4 @@
-const CACHE = 'alcohol-v17';
+const CACHE = 'alcohol-v18';
 const ASSETS = ['./', './index.html', './manifest.json', './sync.js'];
 
 self.addEventListener('install', e => {

@@ -1169,24 +1169,30 @@ function renderMonthProgress() {
       if (cups >= 4) fourPlusDays++;
       if (cups >= 6) sixPlusDays++;
     }
-    const todayKey = `${ym}-${String(todayDay).padStart(2,'0')}`;
-    const todayG = dpg[todayKey] || 0;
-    const todayCup = todayG / 20;
+    // 判定は前日(前夜の酒)基準。mylifeの純アル/支出軸(前日基準)と揃える
+    const yst = new Date(today); yst.setDate(today.getDate() - 1);
+    const ydayKey = `${yst.getFullYear()}-${String(yst.getMonth()+1).padStart(2,'0')}-${String(yst.getDate()).padStart(2,'0')}`;
+    const ydayGraw = dpg[ydayKey];
+    const ydayG = ydayGraw || 0;
+    const ydayCup = ydayG / 20;
     let alertText, alertCls;
-    if (todayG === 0) {
-      alertText = `🍃 今日: 休肝 / 今月 4+杯日 <b>${fourPlusDays}日</b> (6+杯 ${sixPlusDays}日)`;
+    if (ydayGraw == null) {
+      alertText = `🍃 前日: 記録待ち / 今月 4+杯日 <b>${fourPlusDays}日</b> (6+杯 ${sixPlusDays}日)`;
       alertCls = 'ok';
-    } else if (todayCup < 3) {
-      alertText = `🍶 今日: ${todayCup.toFixed(1)}杯 / 今月 4+杯日 <b>${fourPlusDays}日</b>`;
+    } else if (ydayG === 0) {
+      alertText = `🍃 前日: 休肝 / 今月 4+杯日 <b>${fourPlusDays}日</b> (6+杯 ${sixPlusDays}日)`;
       alertCls = 'ok';
-    } else if (todayCup < 4) {
-      alertText = `⚠️ 今日: ${todayCup.toFixed(1)}杯 — 4杯目で重量モード突入注意`;
+    } else if (ydayCup < 3) {
+      alertText = `🍶 前日: ${ydayCup.toFixed(1)}杯 / 今月 4+杯日 <b>${fourPlusDays}日</b>`;
+      alertCls = 'ok';
+    } else if (ydayCup < 4) {
+      alertText = `⚠️ 前日: ${ydayCup.toFixed(1)}杯 — 4杯目で重量モード突入注意`;
       alertCls = 'warn';
-    } else if (todayCup < 6) {
-      alertText = `🚨 今日: ${todayCup.toFixed(1)}杯 (重量モード) / 今月4+杯 <b>${fourPlusDays}日目</b>`;
+    } else if (ydayCup < 6) {
+      alertText = `🚨 前日: ${ydayCup.toFixed(1)}杯 (重量モード) / 今月4+杯 <b>${fourPlusDays}日目</b>`;
       alertCls = 'alert';
     } else {
-      alertText = `💀 今日: ${todayCup.toFixed(1)}杯 (緊急麻酔) / 今月6+杯 <b>${sixPlusDays}日目</b>`;
+      alertText = `💀 前日: ${ydayCup.toFixed(1)}杯 (緊急麻酔) / 今月6+杯 <b>${sixPlusDays}日目</b>`;
       alertCls = 'alert';
     }
     const ext = document.getElementById('progAlcExtra');
