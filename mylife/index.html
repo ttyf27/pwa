@@ -1149,8 +1149,9 @@ function renderMonthProgress() {
     const projG = alcGSum + recentMean * remaining;
     const projCup = projG / 20;
     let judge, cls;
-    if (projCup < 60) { judge = '🟢 控えめコース'; cls = 'ok'; }
-    else if (projCup < 80) { judge = '🟡 平常コース'; cls = 'warn'; }
+    // 判定はグラム着地基準 (段階目標 1200→750g、飲酒アプリ月420g目標に整合)
+    if (projG < 750) { judge = '🟢 控えめコース'; cls = 'ok'; }
+    else if (projG < 1100) { judge = '🟡 警告コース'; cls = 'warn'; }
     else { judge = '🚨 飲み過ぎコース'; cls = 'alert'; }
     document.getElementById('progAlcCur').textContent = `${cupSum.toFixed(1)}杯 / ${Math.round(alcGSum)}g`;
     document.getElementById('progAlcSub').innerHTML = `月末着地: <b>${projCup.toFixed(0)}杯</b> (${Math.round(projG)}g)<br><span style="opacity:0.7">直近30日平均: ${recentMean.toFixed(1)}g/日 (n=${past30G.length})</span>`;
