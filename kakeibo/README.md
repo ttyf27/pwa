@@ -13,14 +13,12 @@
 支出: 住居費🏠 / 食費🍚 / 衣服👕 / 通信費📱 / 生活用品🧴 / 趣味🎮 / 交通費🚃 / 交際費🤝 / 薬💊
 収入: 給与💰 / 賞与🎁 / その他✨
 
-## デプロイ
+## デプロイ (GitHub Pages, 2026-06 Vercel から移行)
 
-Vercel で新規プロジェクト作成:
-1. https://vercel.com → Add New → Project
-2. cc_Garmin リポジトリ import
-3. **Root Directory**: `docs/kakeibo`
-4. **Framework Preset**: Other
-5. Deploy
+`docs/**` を push すると `mirror-pwa.yml` が `ttyf27/pwa` へミラーし GitHub Pages が再配信する。**手動操作は不要**。
+
+- 公開URL: https://ttyf27.github.io/pwa/kakeibo/
+- 端末に新コードを配るには `sw.js` の `CACHE` 版数を bump する
 
 ## データ保存
 

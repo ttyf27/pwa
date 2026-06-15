@@ -24,10 +24,9 @@
 - gokigen/alcohol/kakeibo と**同じPATが使えます** (cc_garmin リポジトリの Contents 読み取り権限)
 - 初回のみ設定モーダルで入力 → localStorage 保存
 
-## デプロイ
+## デプロイ (GitHub Pages, 2026-06 Vercel から移行)
 
-1. https://vercel.com → Add New → Project
-2. cc_Garmin リポジトリ import
-3. **Root Directory**: `docs/dashboard`
-4. Framework Preset: Other
-5. Deploy
+`docs/**` を push すると `mirror-pwa.yml` が `ttyf27/pwa` へミラーし GitHub Pages が再配信する。**手動操作は不要**。
+
+- 公開URL: https://ttyf27.github.io/pwa/dashboard/
+- 端末に新コードを配るには `sw.js` の `CACHE` 版数を bump する

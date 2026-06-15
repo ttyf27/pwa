@@ -12,16 +12,12 @@
 - 月集計(純アル総量/休肝/適量/やや飲み過ぎ/飲み過ぎ/危険)
 - JSON Export/Import
 
-## デプロイ
+## デプロイ (GitHub Pages, 2026-06 Vercel から移行)
 
-Vercel で新規プロジェクト作成:
-1. https://vercel.com → Add New → Project
-2. cc_Garmin リポジトリ import
-3. **Root Directory**: `docs/alcohol`
-4. **Framework Preset**: Other
-5. Deploy
+`docs/**` を push すると `mirror-pwa.yml` が `ttyf27/pwa` へミラーし GitHub Pages が再配信する。**手動操作は不要**。
 
-完成 URL 例: `alcohol-xxx.vercel.app/`
+- 公開URL: https://ttyf27.github.io/pwa/alcohol/
+- 端末に新コードを配るには `sw.js` の `CACHE` 版数を bump する
 
 ## 配色閾値 (g/日)
 

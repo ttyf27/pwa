@@ -17,15 +17,12 @@
 - GitHub Contents API + PAT認証
 - 起動時 fetch + 24h localStorage cache (Stage 3で頻度自動化)
 
-## デプロイ
+## デプロイ (GitHub Pages, 2026-06 Vercel から移行)
 
-1. Vercel → Add New → Project
-2. cc_Garmin リポジトリ import
-3. **Root Directory**: `docs/mylife`
-4. Framework Preset: Other
-5. Deploy
+`docs/**` を private repo `ttyf27/mylife` に push すると `.github/workflows/mirror-pwa.yml` が public repo `ttyf27/pwa` へミラーし、GitHub Pages が再配信する。**手動操作は不要**。
 
-完成URL: `mylife.vercel.app` (希望)
+- 公開URL: https://ttyf27.github.io/pwa/mylife/
+- 端末に新コードを配るには `sw.js` の `CACHE` 版数を bump する
 
 ## 設計鉄則 (絶対遵守)
 
