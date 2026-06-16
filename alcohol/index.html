@@ -670,9 +670,12 @@ function renderList(){
       <div style="height:8px;background:#ececed;border-radius:4px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:#FF9800;border-radius:4px"></div></div>
     </div>`;
   }
-  html+=`<div style="padding:10px 0;border-top:2px solid #e5e5ea;margin-top:4px;display:flex;justify-content:space-between;font-weight:700">
+  const totKcal = totg * 7;        // 純アル ≒ 7kcal/g
+  const fatKg = totKcal / 7000;    // 脂肪 7000kcal/kg
+  html+=`<div style="padding:10px 0 4px;border-top:2px solid #e5e5ea;margin-top:4px;display:flex;justify-content:space-between;font-weight:700">
     <span>合計</span><span>${Math.round(totg).toLocaleString()}g <span style="color:#999;font-size:12px;font-weight:400">(${(totg/Math.max(1,totd)).toFixed(1)}g/日・休肝${totr}日)</span></span></div>`;
-  html+=`<div style="font-size:10px;color:#999;margin-top:8px">※記録のある日のみ集計。杯換算は g÷15。</div></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;font-size:13px;color:#6e6e73"><span>カロリー換算</span><span>≈ ${Math.round(totKcal).toLocaleString()} kcal = 脂肪 <b style="color:#FF6B6B">${fatKg.toFixed(1)}</b> kg 相当</span></div>`;
+  html+=`<div style="font-size:10px;color:#999;margin-top:8px">※記録のある日のみ集計。杯換算は g÷15。kcal換算=純アル7kcal/g、脂肪7000kcal/kg(エネルギー目安で、実際の体重増ではない)。</div></div>`;
   document.getElementById('listView').innerHTML=html;
 }
 
