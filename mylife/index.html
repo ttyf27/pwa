@@ -1104,6 +1104,7 @@ function renderMonthProgress() {
   const todayDay = today.getDate();
   const daysInMonth = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
   const remaining = daysInMonth - todayDay;
+  const G_PER_CUP = 15; // 1杯 = 15g 換算 (ぽっち🌟さん設定)
 
   // (1) BB MAX 直近30日平均 (累計表示は廃止、ぽっち🌟さん指示)
   const series = (allData.garmin && allData.garmin.series) || [];
@@ -1126,7 +1127,7 @@ function renderMonthProgress() {
     document.getElementById('progBbJudge').textContent = '';
   }
 
-  // (2) アルコール 月累計 (g + 杯換算 20g/杯)、直近30日平均ベース
+  // (2) アルコール 月累計 (g + 杯換算 15g/杯)、直近30日平均ベース
   const dpg = (allData.alcohol && allData.alcohol.dailyPureG) || {};
   let alcGSum = 0, alcDays = 0;
   for (let d = 1; d <= todayDay; d++) {
@@ -1144,10 +1145,10 @@ function renderMonthProgress() {
     if (dpg[key] != null) past30G.push(dpg[key]);
   }
   if (alcDays > 0 && past30G.length > 0) {
-    const cupSum = alcGSum / 20;
+    const cupSum = alcGSum / G_PER_CUP;
     const recentMean = past30G.reduce((a,b)=>a+b,0) / past30G.length;
     const projG = alcGSum + recentMean * remaining;
-    const projCup = projG / 20;
+    const projCup = projG / G_PER_CUP;
     let judge, cls;
     // 判定はグラム着地基準 (段階目標 1200→750g、飲酒アプリ月420g目標に整合)
     if (projG < 750) { judge = '🟢 控えめコース'; cls = 'ok'; }
@@ -1165,7 +1166,7 @@ function renderMonthProgress() {
       const key = `${ym}-${String(d).padStart(2,'0')}`;
       const g = dpg[key];
       if (g == null) continue;
-      const cups = g / 20;
+      const cups = g / G_PER_CUP;
       if (cups >= 4) fourPlusDays++;
       if (cups >= 6) sixPlusDays++;
     }
@@ -1174,7 +1175,7 @@ function renderMonthProgress() {
     const ydayKey = `${yst.getFullYear()}-${String(yst.getMonth()+1).padStart(2,'0')}-${String(yst.getDate()).padStart(2,'0')}`;
     const ydayGraw = dpg[ydayKey];
     const ydayG = ydayGraw || 0;
-    const ydayCup = ydayG / 20;
+    const ydayCup = ydayG / G_PER_CUP;
     let alertText, alertCls;
     if (ydayGraw == null) {
       alertText = `🍃 前日: 記録待ち / 今月 4+杯日 <b>${fourPlusDays}日</b> (6+杯 ${sixPlusDays}日)`;
