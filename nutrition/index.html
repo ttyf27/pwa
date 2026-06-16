@@ -111,7 +111,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
 <script>
 const STORAGE_KEY = 'nutrition_data';
 // kcal2700 = 厚労省 推定エネルギー必要量 (30-49歳男性・身体活動ふつう)。普通の1日の物差し
-const TARGET = { kcal:2700, p:120, f:40, fRed:60, c:210 }; // P120g/C210g目標, 脂質40超で黄・60超で赤
+const TARGET = { kcal:2700, cut:2580, p:120, f:40, fRed:60, c:210 }; // kcal2700=普通, cut2580=2ヶ月で-1kgの減量ライン
 
 const SEED_PRESETS = [
   { id:'seed_egg',   name:'卵 (M 1個)',        kcal:76,  p:6.2, f:5.2, c:0.2 },
@@ -183,10 +183,15 @@ function render(){
       <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
   };
   const kpct=Math.min(100, t.kcal/TARGET.kcal*100);
-  const kcol = t.kcal>TARGET.kcal ? '#FFA726' : '#66BB6A';
+  const cutpct=TARGET.cut/TARGET.kcal*100;
+  const kcol = t.kcal>TARGET.kcal ? '#FF6B6B' : (t.kcal>TARGET.cut ? '#FFA726' : '#66BB6A');
   document.getElementById('summary').innerHTML =
     `<div class="kcal-big">${Math.round(t.kcal)} <small>/ ${TARGET.kcal} kcal (普通の1日)</small></div>`+
-    `<div class="bar-bg" style="margin-top:8px;height:11px"><div class="bar-fill" style="width:${kpct}%;background:${kcol}"></div></div>`+
+    `<div style="position:relative;margin-top:8px">`+
+      `<div class="bar-bg" style="height:13px"><div class="bar-fill" style="width:${kpct}%;background:${kcol}"></div></div>`+
+      `<div style="position:absolute;top:-3px;height:19px;left:${cutpct}%;width:2px;background:#C62828"></div>`+
+    `</div>`+
+    `<div style="font-size:10px;color:#6e6e73;margin-top:3px">🔻 ${TARGET.cut}kcal=減量ライン(2ヶ月で-1kg) ／ 満タン=普通 ${TARGET.kcal}</div>`+
     bar('🥩 タンパク質 P', t.p, TARGET.p, 'g', false)+
     bar('🍚 炭水化物 C', t.c, TARGET.c, 'g', false)+
     bar('🧈 脂質 F (40超黄/60超赤)', t.f, TARGET.f, 'g', true, TARGET.fRed);
