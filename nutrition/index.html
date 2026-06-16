@@ -66,6 +66,12 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
   <button class="sync-btn" id="syncStatusBtn">⚙️</button>
 </div>
 
+<div style="display:flex;gap:6px;padding:8px 12px;background:#fff;border-bottom:1px solid #f0f0f0;">
+  <button id="tabDay" onclick="setMainTab('day')" style="flex:1;padding:9px;border:1px solid #e5e5ea;border-radius:8px;background:#2E7D32;color:#fff;font-size:13px;font-weight:600;">📝 記録</button>
+  <button id="tabHist" onclick="setMainTab('hist')" style="flex:1;padding:9px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;color:#1d1d1f;font-size:13px;font-weight:600;">📋 日別一覧</button>
+</div>
+
+<div id="dayView">
 <div class="datebar">
   <button class="nav-btn" onclick="navDay(-1)">‹</button>
   <div class="d" id="dateLabel" onclick="goToday()">-</div>
@@ -74,8 +80,11 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
 
 <div class="card" id="summary"></div>
 <div class="items" id="itemList"></div>
+</div>
 
-<button class="fab" onclick="openAdd()">＋</button>
+<div id="histView" style="display:none"></div>
+
+<button class="fab" id="fab" onclick="openAdd()">＋</button>
 
 <!-- 追加モーダル -->
 <div class="overlay" id="addOverlay" onclick="if(event.target===this)closeAdd()">
@@ -154,15 +163,56 @@ const sync = new GitHubSync({
 
 // ===== 集計・描画 =====
 function dayItems(){ return state.days[ymd(curDate)] || []; }
-function dayTotals(){
+function totalsFor(key){
   let t={kcal:0,p:0,f:0,c:0};
-  for(const it of dayItems()){
+  for(const it of (state.days[key]||[])){
     const q=it.qty||1;
     t.kcal+=(it.kcal||0)*q; t.p+=(it.p||0)*q; t.f+=(it.f||0)*q; t.c+=(it.c||0)*q;
   }
   return t;
 }
+function dayTotals(){ return totalsFor(ymd(curDate)); }
 function r1(x){ return Math.round(x*10)/10; }
+
+// ===== メインタブ (記録 / 日別一覧) =====
+function setMainTab(t){
+  const day = t==='day';
+  document.getElementById('dayView').style.display = day?'block':'none';
+  document.getElementById('histView').style.display = day?'none':'block';
+  document.getElementById('fab').style.display = day?'flex':'none';
+  const td=document.getElementById('tabDay'), th=document.getElementById('tabHist');
+  td.style.background=day?'#2E7D32':'#fff'; td.style.color=day?'#fff':'#1d1d1f';
+  th.style.background=day?'#fff':'#2E7D32'; th.style.color=day?'#1d1d1f':'#fff';
+  if(!day) renderHist();
+}
+// 記録のある日を新しい順に。タップでその日の記録へジャンプ
+function renderHist(){
+  const days=Object.keys(state.days).filter(d=>(state.days[d]||[]).length>0).sort().reverse();
+  let html=`<div class="card"><div style="font-weight:700;font-size:15px;margin-bottom:6px">📋 日別一覧</div>`;
+  if(!days.length){ document.getElementById('histView').innerHTML=html+'<div style="color:#999;text-align:center;padding:20px">まだ記録がありません</div></div>'; return; }
+  const wkn=['日','月','火','水','木','金','土'];
+  for(const d of days){
+    const t=totalsFor(d);
+    const [y,m,da]=d.split('-').map(Number); const wk=wkn[new Date(y,m-1,da).getDay()];
+    const kc = t.kcal>TARGET.kcal?'#FF6B6B':(t.kcal>TARGET.cut?'#FFA726':'#2E7D32');
+    const pc = t.p>=TARGET.p?'#2E7D32':'#6e6e73';
+    const fc = t.f>TARGET.fRed?'#FF6B6B':(t.f>TARGET.f?'#FFA726':'#6e6e73');
+    html+=`<div onclick="jumpToDay('${d}')" style="padding:9px 0;border-top:1px solid #f0f0f0;cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-weight:600">${m}/${da}（${wk}）</span>
+        <span><b style="color:${kc};font-size:16px">${Math.round(t.kcal)}</b> <span style="font-size:11px;color:#999">kcal</span></span>
+      </div>
+      <div style="font-size:12px;margin-top:2px">
+        <span style="color:${pc}">P ${r1(t.p)}</span> ・
+        <span style="color:${fc}">F ${r1(t.f)}</span> ・
+        <span style="color:#6e6e73">C ${r1(t.c)}</span> <span style="color:#bbb">g</span>
+      </div>
+    </div>`;
+  }
+  html+=`<div style="font-size:10px;color:#999;margin-top:8px">タップでその日の記録へ。P目標${TARGET.p}達成=緑 / 脂質${TARGET.f}超=黄・${TARGET.fRed}超=赤。</div></div>`;
+  document.getElementById('histView').innerHTML=html;
+}
+function jumpToDay(d){ const [y,m,da]=d.split('-').map(Number); curDate=new Date(y,m-1,da); setMainTab('day'); render(); }
 
 function render(){
   const wk=['日','月','火','水','木','金','土'][curDate.getDay()];
