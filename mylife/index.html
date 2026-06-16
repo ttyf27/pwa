@@ -1114,7 +1114,7 @@ function renderMonthProgress() {
     // 警告フラグは日次平均基準: 黄金期相当 43+、平常 33+、警告未満
     let judge, cls;
     if (recentMean >= 43) { judge = '🟢 絶好調コース'; cls = 'ok'; }
-    else if (recentMean >= 33) { judge = '🟡 平常コース'; cls = 'warn'; }
+    else if (recentMean >= 33) { judge = '🟢 平常コース'; cls = 'ok'; }
     else { judge = '🚨 警告コース'; cls = 'alert'; }
     document.getElementById('progBbCur').textContent = `${recentMean.toFixed(1)}/日`;
     document.getElementById('progBbSub').innerHTML = `<span style="opacity:0.7">直近30日 n=${past30Bb.length}</span>`;
@@ -1160,44 +1160,20 @@ function renderMonthProgress() {
     je.textContent = judge;
     je.className = 'p-judge ' + cls;
 
-    // §A63「4杯閾値」可視化: 今月4+杯日カウンタ + 4杯目アラート
+    // §A63「4杯閾値」可視化: 今月の4+杯/6+杯日カウント。色は実態(月内カウント)で決める
+    // (前日だけで緑になり月判定🚨と矛盾する問題を解消、前日行は廃止)
     let fourPlusDays = 0, sixPlusDays = 0;
     for (let d = 1; d <= todayDay; d++) {
       const key = `${ym}-${String(d).padStart(2,'0')}`;
       const g = dpg[key];
       if (g == null) continue;
       const cups = g / G_PER_CUP;
-      if (cups >= 4) fourPlusDays++;
-      if (cups >= 6) sixPlusDays++;
+      if (cups >= 4) fourPlusDays++;   // 4杯=60g
+      if (cups >= 6) sixPlusDays++;    // 6杯=90g
     }
-    // 判定は前日(前夜の酒)基準。mylifeの純アル/支出軸(前日基準)と揃える
-    const yst = new Date(today); yst.setDate(today.getDate() - 1);
-    const ydayKey = `${yst.getFullYear()}-${String(yst.getMonth()+1).padStart(2,'0')}-${String(yst.getDate()).padStart(2,'0')}`;
-    const ydayGraw = dpg[ydayKey];
-    const ydayG = ydayGraw || 0;
-    const ydayCup = ydayG / G_PER_CUP;
-    let alertText, alertCls;
-    if (ydayGraw == null) {
-      alertText = `🍃 前日: 記録待ち / 今月 4+杯日 <b>${fourPlusDays}日</b> (6+杯 ${sixPlusDays}日)`;
-      alertCls = 'ok';
-    } else if (ydayG === 0) {
-      alertText = `🍃 前日: 休肝 / 今月 4+杯日 <b>${fourPlusDays}日</b> (6+杯 ${sixPlusDays}日)`;
-      alertCls = 'ok';
-    } else if (ydayCup < 3) {
-      alertText = `🍶 前日: ${ydayCup.toFixed(1)}杯 / 今月 4+杯日 <b>${fourPlusDays}日</b>`;
-      alertCls = 'ok';
-    } else if (ydayCup < 4) {
-      alertText = `⚠️ 前日: ${ydayCup.toFixed(1)}杯 — 4杯目で重量モード突入注意`;
-      alertCls = 'warn';
-    } else if (ydayCup < 6) {
-      alertText = `🚨 前日: ${ydayCup.toFixed(1)}杯 (重量モード) / 今月4+杯 <b>${fourPlusDays}日目</b>`;
-      alertCls = 'alert';
-    } else {
-      alertText = `💀 前日: ${ydayCup.toFixed(1)}杯 (緊急麻酔) / 今月6+杯 <b>${sixPlusDays}日目</b>`;
-      alertCls = 'alert';
-    }
+    const alertCls = sixPlusDays > 0 ? 'alert' : (fourPlusDays > 0 ? 'warn' : 'ok');
     const ext = document.getElementById('progAlcExtra');
-    ext.innerHTML = alertText;
+    ext.innerHTML = `🍺 今月 4+杯日 <b>${fourPlusDays}日</b>（6+杯 ${sixPlusDays}日）`;
     ext.className = 'p-extra ' + alertCls;
   } else {
     document.getElementById('progAlcCur').textContent = '-';
