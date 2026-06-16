@@ -152,6 +152,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-se
       <div class="modal-date" id="modalDate">📅 2026年5月30日</div>
       <div class="action-row" id="actionRow"></div>
       <div class="cat-tab-row" id="categoryTabs"></div>
+      <div id="metabPanel" style="padding:8px 16px; border-top:1px solid #f0f0f0; background:#fffdf5; font-size:13px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>⏱ 純アル <b id="mp_g">0</b>g (<b id="mp_cups">0</b>杯)</span>
+          <span>分解目安 <b id="mp_hours" style="color:#FF9800;">0.0</b> 時間</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+          <span>飲み終わり <input id="mp_finish" type="time" oninput="updateMetab()" style="font-size:13px; border:1px solid #d2d2d7; border-radius:6px; padding:3px 5px;"></span>
+          <span>→ 完了目安 <b id="mp_clear" style="color:#FF9800;">--:--</b></span>
+        </div>
+        <div style="font-size:10px; color:#999; margin-top:5px; line-height:1.4;">※体重73kg・体重×0.1g/時の概算。体質・体調・食事で変動。運転可否の判断には使えません</div>
+      </div>
     </div>
     <div class="cat-help" id="catHelpText"></div>
     <div class="preset-list" id="presetList"></div>
@@ -305,6 +316,11 @@ const TH = { rest: 0, moderate: 20, mild: 40, heavy: 60 };
 
 // 1杯 = 15g 換算 (ぽっち🌟さん設定)。g→杯表示はすべてこの係数で統一
 const G_PER_CUP = 15;
+
+// アルコール分解の概算: 分解速度 = 体重(kg) × 0.1 g/時 (体重73kg固定 → 7.3g/時)
+// ※体質・体調・食事で変動する目安。運転可否の判断には使わない
+const WEIGHT_KG = 73;
+const METAB_RATE_G_PER_HR = WEIGHT_KG * 0.1;
 
 // セル色分け
 function classifyDay(g) {
@@ -620,6 +636,11 @@ function openModal(dateStr) {
   const [y, mo, d] = dateStr.split('-');
   document.getElementById('modalDate').textContent = `📅 ${y}年${parseInt(mo)}月${parseInt(d)}日`;
 
+  // 飲み終わり時刻の既定値 = 現在時刻
+  const now = new Date();
+  document.getElementById('mp_finish').value =
+    `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
   renderModal();
   document.getElementById('modal').classList.add('open');
 }
@@ -650,6 +671,42 @@ function renderModal() {
 
   // プリセット一覧
   renderPresetList();
+
+  // 分解時間パネル更新
+  updateMetab();
+}
+
+// 編集中の純アルコール合計g (saveDay と同ロジック)
+function editingDrinksG() {
+  if (editingState.status === 'no_drink') return 0;
+  let t = 0; const ps = allPresets();
+  for (const [id, c] of Object.entries(editingState.drinks)) {
+    if (c > 0 && ps[id]) t += ps[id].pure_alc_g * c;
+  }
+  return Math.round(t * 10) / 10;
+}
+
+// 分解時間の概算と完了予定時刻を表示更新
+function updateMetab() {
+  const g = editingDrinksG();
+  document.getElementById('mp_g').textContent = g;
+  document.getElementById('mp_cups').textContent = (g / G_PER_CUP).toFixed(1);
+  const hours = g > 0 ? g / METAB_RATE_G_PER_HR : 0;
+  document.getElementById('mp_hours').textContent = hours.toFixed(1);
+  const fin = document.getElementById('mp_finish').value;
+  const clearEl = document.getElementById('mp_clear');
+  if (g > 0 && fin) {
+    const [fh, fm] = fin.split(':').map(Number);
+    const totalMin = fh * 60 + fm + Math.round(hours * 60);
+    const dayOffset = Math.floor(totalMin / 1440);
+    const mm = ((totalMin % 1440) + 1440) % 1440;
+    const ch = String(Math.floor(mm / 60)).padStart(2, '0');
+    const cm = String(mm % 60).padStart(2, '0');
+    const tag = dayOffset === 1 ? '(翌日)' : dayOffset >= 2 ? `(+${dayOffset}日)` : '';
+    clearEl.textContent = `${ch}:${cm}${tag}`;
+  } else {
+    clearEl.textContent = '--:--';
+  }
 }
 
 function renderPresetList() {
