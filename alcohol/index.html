@@ -122,6 +122,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-se
   <button class="nav-btn" onclick="navMonth(1)">→</button>
 </div>
 
+<div style="display:flex;gap:6px;padding:8px 12px;background:#fff;border-bottom:1px solid #f0f0f0;">
+  <button id="tabCal" onclick="setMainTab('cal')" style="flex:1;padding:9px;border:1px solid #e5e5ea;border-radius:8px;background:#FF9800;color:#fff;font-size:13px;font-weight:600;">📅 カレンダー</button>
+  <button id="tabList" onclick="setMainTab('list')" style="flex:1;padding:9px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;color:#1d1d1f;font-size:13px;font-weight:600;">📊 月別一覧</button>
+</div>
+
+<div id="calView">
 <div class="day-headers">
   <div class="day-header weekday">月</div>
   <div class="day-header weekday">火</div>
@@ -139,6 +145,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-se
 <div class="week-chart" id="weekChart"></div>
 
 <div class="summary" id="summary"></div>
+</div>
+
+<div id="listView" style="display:none"></div>
 
 <!-- Day Edit Modal -->
 <div class="modal-overlay" id="modal">
@@ -207,9 +216,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-se
 </div>
 
 <div class="toolbar">
-  <button class="toolbar-btn" onclick="exportJSON()">📤 Export</button>
-  <button class="toolbar-btn" onclick="importJSON()">📥 Import</button>
-  <button class="toolbar-btn" id="syncStatusBtn" style="flex:0 0 auto; min-width:90px;">⚙️ 未設定</button>
+  <button class="toolbar-btn" id="syncStatusBtn">⚙️ 未設定</button>
 </div>
 
 <script src="sync.js"></script>
@@ -620,6 +627,53 @@ function renderMA30() {
 function navMonth(delta) {
   currentDate.setMonth(currentDate.getMonth() + delta);
   render();
+}
+
+// ===== メインタブ (カレンダー / 月別一覧) =====
+function setMainTab(t){
+  const cal = t==='cal';
+  document.getElementById('calView').style.display = cal?'block':'none';
+  document.getElementById('listView').style.display = cal?'none':'block';
+  const tc=document.getElementById('tabCal'), tl=document.getElementById('tabList');
+  tc.style.background=cal?'#FF9800':'#fff'; tc.style.color=cal?'#fff':'#1d1d1f';
+  tl.style.background=cal?'#fff':'#FF9800'; tl.style.color=cal?'#1d1d1f':'#fff';
+  document.querySelectorAll('.header .nav-btn').forEach(b=>b.style.visibility=cal?'visible':'hidden');
+  if(!cal) renderList();
+}
+
+// 今年の月別 純アルコールg 一覧
+function renderList(){
+  const yr=String(new Date().getFullYear());
+  const mo={};
+  for(const [d,e] of Object.entries(state.data)){
+    if(!d.startsWith(yr+'-')) continue;
+    const g=dayTotalG(e); if(g==null) continue;
+    const k=d.slice(0,7); (mo[k]=mo[k]||{g:0,days:0,rest:0});
+    mo[k].g+=g; mo[k].days++; if(g===0) mo[k].rest++;
+  }
+  const keys=Object.keys(mo).sort();
+  let html=`<div class="summary" style="margin:8px"><div style="font-weight:700;font-size:15px;margin-bottom:6px">${yr}年 月別 純アルコール</div>`;
+  if(!keys.length){
+    document.getElementById('listView').innerHTML = html+'<div style="color:#999;padding:16px;text-align:center">今年の記録がありません</div></div>';
+    return;
+  }
+  const maxg=Math.max(1,...keys.map(k=>mo[k].g));
+  let totg=0,totd=0,totr=0;
+  for(const k of keys){
+    const r=mo[k]; totg+=r.g; totd+=r.days; totr+=r.rest;
+    const mm=parseInt(k.slice(5)), avg=r.days?r.g/r.days:0, pct=r.g/maxg*100;
+    html+=`<div style="padding:8px 0;border-top:1px solid #f0f0f0">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-weight:600">${mm}月</span>
+        <span><b style="font-size:16px">${Math.round(r.g).toLocaleString()}</b>g <span style="color:#999;font-size:12px">(${avg.toFixed(1)}g/日・休肝${r.rest}日)</span></span>
+      </div>
+      <div style="height:8px;background:#ececed;border-radius:4px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:#FF9800;border-radius:4px"></div></div>
+    </div>`;
+  }
+  html+=`<div style="padding:10px 0;border-top:2px solid #e5e5ea;margin-top:4px;display:flex;justify-content:space-between;font-weight:700">
+    <span>合計</span><span>${Math.round(totg).toLocaleString()}g <span style="color:#999;font-size:12px;font-weight:400">(${(totg/Math.max(1,totd)).toFixed(1)}g/日・休肝${totr}日)</span></span></div>`;
+  html+=`<div style="font-size:10px;color:#999;margin-top:8px">※記録のある日のみ集計。杯換算は g÷15。</div></div>`;
+  document.getElementById('listView').innerHTML=html;
 }
 
 // ===== 日次入力モーダル =====
