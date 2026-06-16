@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PFC">
+<meta name="theme-color" content="#2E7D32">
+<link rel="manifest" href="manifest.json">
+<title>nutrition</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif; background:#f5f5f7; color:#1d1d1f; padding-bottom:90px; min-height:100vh; }
+.header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:#fff; border-bottom:1px solid #d2d2d7; position:sticky; top:0; z-index:10; padding-top:max(14px,env(safe-area-inset-top)); }
+.header-title { font-size:18px; font-weight:700; }
+.sync-btn { font-size:12px; background:#f0f0f0; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; min-height:36px; }
+.datebar { display:flex; align-items:center; justify-content:space-between; background:#fff; padding:10px 16px; border-bottom:1px solid #f0f0f0; }
+.nav-btn { padding:8px 14px; background:#f0f0f0; border:none; border-radius:8px; font-size:16px; cursor:pointer; min-width:44px; min-height:44px; }
+.datebar .d { font-size:16px; font-weight:700; flex:1; text-align:center; }
+.datebar .d small { display:block; font-size:11px; color:#999; font-weight:400; }
+.card { background:#fff; margin:8px; padding:14px 16px; border-radius:12px; border:1px solid #e5e5ea; }
+.kcal-big { font-size:30px; font-weight:800; }
+.kcal-big small { font-size:13px; color:#6e6e73; font-weight:500; }
+.bar-row { margin-top:12px; }
+.bar-row .lab { display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; }
+.bar-row .lab b { font-weight:700; }
+.bar-bg { height:9px; background:#ececed; border-radius:5px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:5px; transition:width .25s; }
+.items { margin:8px; }
+.item { display:flex; align-items:center; background:#fff; border:1px solid #e5e5ea; border-radius:10px; padding:10px 12px; margin-bottom:6px; gap:10px; }
+.item .info { flex:1; min-width:0; }
+.item .nm { font-size:14px; font-weight:600; }
+.item .mac { font-size:11px; color:#6e6e73; margin-top:2px; }
+.item .qty { display:flex; align-items:center; gap:6px; }
+.qbtn { width:30px; height:30px; border-radius:50%; border:1px solid #d2d2d7; background:#fff; font-size:17px; font-weight:700; cursor:pointer; line-height:1; }
+.qn { min-width:20px; text-align:center; font-weight:700; font-size:14px; }
+.empty { text-align:center; color:#999; font-size:13px; padding:24px; }
+.fab { position:fixed; right:18px; bottom:calc(20px + env(safe-area-inset-bottom)); width:56px; height:56px; border-radius:50%; background:#2E7D32; color:#fff; font-size:30px; border:none; box-shadow:0 4px 12px rgba(0,0,0,.25); cursor:pointer; z-index:20; }
+/* modal */
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:flex-end; justify-content:center; z-index:100; }
+.overlay.open { display:flex; }
+.sheet { background:#fff; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; border-radius:16px 16px 0 0; padding:16px; padding-bottom:calc(20px+env(safe-area-inset-bottom)); }
+.sheet h3 { font-size:16px; font-weight:700; margin-bottom:10px; }
+.seg { display:flex; gap:6px; margin-bottom:12px; }
+.seg button { flex:1; padding:9px; border:1px solid #e5e5ea; border-radius:8px; background:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+.seg button.on { background:#2E7D32; color:#fff; border-color:#2E7D32; }
+.preset-row { display:flex; align-items:center; gap:8px; padding:10px 8px; border-bottom:1px solid #f0f0f0; }
+.preset-row .info { flex:1; min-width:0; }
+.preset-row .nm { font-size:14px; font-weight:600; }
+.preset-row .mac { font-size:11px; color:#6e6e73; }
+.preset-row .add { background:#2E7D32; color:#fff; border:none; border-radius:8px; padding:8px 12px; font-weight:700; cursor:pointer; }
+.preset-row .del { background:none; border:none; color:#FF6B6B; font-size:18px; cursor:pointer; }
+.field { margin-bottom:10px; }
+.field label { display:block; font-size:12px; color:#6e6e73; margin-bottom:4px; }
+.field input { width:100%; padding:10px; border:1px solid #d2d2d7; border-radius:8px; font-size:15px; box-sizing:border-box; -webkit-appearance:none; }
+.grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.btn-primary { width:100%; padding:13px; background:#2E7D32; color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; margin-top:6px; }
+.chk { display:flex; align-items:center; gap:8px; font-size:13px; color:#6e6e73; margin:8px 0; }
+.note { font-size:11px; color:#999; line-height:1.5; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-title">🥗 PFC / カロリー</div>
+  <button class="sync-btn" id="syncStatusBtn">⚙️</button>
+</div>
+
+<div class="datebar">
+  <button class="nav-btn" onclick="navDay(-1)">‹</button>
+  <div class="d" id="dateLabel" onclick="goToday()">-</div>
+  <button class="nav-btn" onclick="navDay(1)">›</button>
+</div>
+
+<div class="card" id="summary"></div>
+<div class="items" id="itemList"></div>
+
+<button class="fab" onclick="openAdd()">＋</button>
+
+<!-- 追加モーダル -->
+<div class="overlay" id="addOverlay" onclick="if(event.target===this)closeAdd()">
+  <div class="sheet">
+    <h3>食べたものを追加</h3>
+    <div class="seg">
+      <button id="segPreset" class="on" onclick="setTab('preset')">📋 よく食べる</button>
+      <button id="segManual" onclick="setTab('manual')">✏️ 手入力(外食)</button>
+    </div>
+
+    <div id="tabPreset">
+      <div id="presetList"></div>
+      <div class="note">コンビニ/スーパーの商品は栄養成分ラベルの写真をぽっち🌟さんがチャットに貼る → 私が数値を起こして、ここに「よく食べる」として登録します。</div>
+    </div>
+
+    <div id="tabManual" style="display:none;">
+      <div class="field"><label>名前</label><input id="f_name" type="text" placeholder="例: 炭火焼鳥丼" autocomplete="off"></div>
+      <div class="grid4">
+        <div class="field"><label>kcal</label><input id="f_kcal" type="number" inputmode="numeric" placeholder="0"></div>
+        <div class="field"><label>P (g)</label><input id="f_p" type="number" inputmode="decimal" placeholder="0"></div>
+        <div class="field"><label>F (g)</label><input id="f_f" type="number" inputmode="decimal" placeholder="0"></div>
+        <div class="field"><label>C (g)</label><input id="f_c" type="number" inputmode="decimal" placeholder="0"></div>
+      </div>
+      <div class="field"><label>数量</label><input id="f_qty" type="number" inputmode="decimal" value="1" step="0.5"></div>
+      <label class="chk"><input type="checkbox" id="f_savePreset"> 「よく食べる」に登録する</label>
+      <button class="btn-primary" onclick="addManual()">この日に追加</button>
+      <div class="note">kcalを空欄にすると P×4 + F×9 + C×4 で自動計算します。</div>
+    </div>
+  </div>
+</div>
+
+<script src="sync.js"></script>
+<script>
+const STORAGE_KEY = 'nutrition_data';
+const TARGET = { kcal:1800, p:150, f:40, c:210 }; // P150g/C210g/F≤40g (pochi profile)
+
+const SEED_PRESETS = [
+  { id:'seed_egg',   name:'卵 (M 1個)',        kcal:76,  p:6.2, f:5.2, c:0.2 },
+  { id:'seed_natto', name:'納豆 (1パック45g)', kcal:90,  p:8.3, f:4.5, c:5.4 },
+  { id:'seed_rice',  name:'白米 (茶碗1杯150g)',kcal:234, p:3.8, f:0.5, c:51.9 },
+  { id:'seed_tofu',  name:'木綿豆腐 (1/2丁)',  kcal:110, p:10,  f:7,   c:2 },
+  { id:'seed_pro',   name:'プロテイン (1杯)',  kcal:120, p:24,  f:1.5, c:3 },
+];
+
+let state = loadState();
+let curDate = new Date();
+let addTab = 'preset';
+
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (s && typeof s === 'object') {
+      if (!s.days) s.days = {};
+      if (!s.presets) s.presets = [];
+      return s;
+    }
+  } catch(e) {}
+  return { days:{}, presets: SEED_PRESETS.slice() };
+}
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  sync.markDirtyAndPush();
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function ymd(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function num(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
+
+const sync = new GitHubSync({
+  appName:'nutrition',
+  repoOwner:'ttyf27', repoName:'mylife',
+  filePath:'data/pwa/nutrition.json',
+  branch:'claude/garmin-data-analysis-V2xrD',
+  getData: () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"days":{},"presets":[]}'),
+});
+
+// ===== 集計・描画 =====
+function dayItems(){ return state.days[ymd(curDate)] || []; }
+function dayTotals(){
+  let t={kcal:0,p:0,f:0,c:0};
+  for(const it of dayItems()){
+    const q=it.qty||1;
+    t.kcal+=(it.kcal||0)*q; t.p+=(it.p||0)*q; t.f+=(it.f||0)*q; t.c+=(it.c||0)*q;
+  }
+  return t;
+}
+function r1(x){ return Math.round(x*10)/10; }
+
+function render(){
+  const wk=['日','月','火','水','木','金','土'][curDate.getDay()];
+  const isToday = ymd(curDate)===ymd(new Date());
+  document.getElementById('dateLabel').innerHTML =
+    `${curDate.getFullYear()}/${curDate.getMonth()+1}/${curDate.getDate()} (${wk})` +
+    `<small>${isToday?'今日':'タップで今日へ'}</small>`;
+
+  const t=dayTotals();
+  const bar=(label,val,tgt,unit,ceil)=>{
+    const pct=Math.min(100, tgt? val/tgt*100 : 0);
+    let col='#2E7D32';
+    if(ceil){ col = val>tgt ? '#FF6B6B' : '#66BB6A'; }      // 脂質=上限(超で赤)
+    else { col = val>=tgt ? '#2E7D32' : '#66BB6A'; }
+    return `<div class="bar-row"><div class="lab"><span>${label}</span><span><b>${r1(val)}</b> / ${tgt}${unit}</span></div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
+  };
+  document.getElementById('summary').innerHTML =
+    `<div class="kcal-big">${Math.round(t.kcal)} <small>/ ${TARGET.kcal} kcal</small></div>`+
+    bar('🥩 タンパク質 P', t.p, TARGET.p, 'g', false)+
+    bar('🍚 炭水化物 C', t.c, TARGET.c, 'g', false)+
+    bar('🧈 脂質 F (上限)', t.f, TARGET.f, 'g', true);
+
+  const items=dayItems();
+  const el=document.getElementById('itemList');
+  if(items.length===0){ el.innerHTML='<div class="empty">まだ記録がありません。右下の＋から追加</div>'; return; }
+  el.innerHTML=items.map(it=>{
+    const q=it.qty||1;
+    return `<div class="item">
+      <div class="info">
+        <div class="nm">${escapeHtml(it.name)}</div>
+        <div class="mac">${Math.round((it.kcal||0)*q)}kcal ・ P${r1((it.p||0)*q)} F${r1((it.f||0)*q)} C${r1((it.c||0)*q)}</div>
+      </div>
+      <div class="qty">
+        <button class="qbtn" onclick="adjustQty('${it.id}',-0.5)">−</button>
+        <span class="qn">${q}</span>
+        <button class="qbtn" onclick="adjustQty('${it.id}',0.5)">＋</button>
+      </div>
+      <button class="del qbtn" style="border:none;color:#FF6B6B" onclick="delItem('${it.id}')">🗑</button>
+    </div>`;
+  }).join('');
+}
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function navDay(delta){ curDate.setDate(curDate.getDate()+delta); render(); }
+function goToday(){ curDate=new Date(); render(); }
+
+// ===== 追加 =====
+function openAdd(){ setTab('preset'); renderPresets(); document.getElementById('addOverlay').classList.add('open'); }
+function closeAdd(){ document.getElementById('addOverlay').classList.remove('open'); }
+function setTab(t){
+  addTab=t;
+  document.getElementById('segPreset').classList.toggle('on',t==='preset');
+  document.getElementById('segManual').classList.toggle('on',t==='manual');
+  document.getElementById('tabPreset').style.display = t==='preset'?'block':'none';
+  document.getElementById('tabManual').style.display = t==='manual'?'block':'none';
+}
+function renderPresets(){
+  const el=document.getElementById('presetList');
+  if(!state.presets.length){ el.innerHTML='<div class="empty">プリセット未登録。手入力タブで「登録」するか、ラベル写真から追加します。</div>'; return; }
+  el.innerHTML=state.presets.map(p=>`<div class="preset-row">
+    <div class="info"><div class="nm">${escapeHtml(p.name)}</div>
+      <div class="mac">${p.kcal||0}kcal ・ P${r1(p.p||0)} F${r1(p.f||0)} C${r1(p.c||0)}</div></div>
+    <button class="add" onclick="addFromPreset('${p.id}')">追加</button>
+    <button class="del" onclick="delPreset('${p.id}')">−</button>
+  </div>`).join('');
+}
+function addFromPreset(pid){
+  const p=state.presets.find(x=>x.id===pid); if(!p) return;
+  const key=ymd(curDate); state.days[key]=state.days[key]||[];
+  state.days[key].push({ id:uid(), name:p.name, kcal:p.kcal||0, p:p.p||0, f:p.f||0, c:p.c||0, qty:1 });
+  saveState(); render(); closeAdd();
+}
+function addManual(){
+  const name=document.getElementById('f_name').value.trim();
+  if(!name){ alert('名前を入れてください'); return; }
+  let kcal=num(document.getElementById('f_kcal').value);
+  const p=num(document.getElementById('f_p').value), f=num(document.getElementById('f_f').value), c=num(document.getElementById('f_c').value);
+  if(!kcal) kcal=Math.round(p*4+f*9+c*4); // 空欄なら自動計算
+  const qty=num(document.getElementById('f_qty').value)||1;
+  const key=ymd(curDate); state.days[key]=state.days[key]||[];
+  state.days[key].push({ id:uid(), name, kcal, p, f, c, qty });
+  if(document.getElementById('f_savePreset').checked){
+    state.presets.push({ id:uid(), name, kcal, p, f, c });
+  }
+  // フォームクリア
+  ['f_name','f_kcal','f_p','f_f','f_c'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_qty').value='1'; document.getElementById('f_savePreset').checked=false;
+  saveState(); render(); closeAdd();
+}
+function adjustQty(id,delta){
+  const items=dayItems(); const it=items.find(x=>x.id===id); if(!it) return;
+  it.qty=Math.max(0,(it.qty||1)+delta);
+  if(it.qty===0){ state.days[ymd(curDate)]=items.filter(x=>x.id!==id); }
+  saveState(); render();
+}
+function delItem(id){
+  const key=ymd(curDate);
+  state.days[key]=(state.days[key]||[]).filter(x=>x.id!==id);
+  saveState(); render();
+}
+function delPreset(pid){
+  if(!confirm('このプリセットを削除しますか?(記録済みの履歴は残ります)')) return;
+  state.presets=state.presets.filter(x=>x.id!==pid);
+  saveState(); renderPresets();
+}
+
+// ===== 起動 =====
+sync.attachStatusElement(document.getElementById('syncStatusBtn'));
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+render();
+
+// 起動時に repo から読み戻す (空localStorageが空pushでrepoを上書きするのを防ぐ / server-wins)
+async function initialFetch(){
+  const pat=sync.getPat(); if(!pat) return;
+  try{
+    const url=`https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
+    const res=await fetch(url,{cache:'no-store',headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
+    if(!res.ok) return;
+    const j=await res.json();
+    const remote=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+    const hasData = remote && ((remote.days && Object.keys(remote.days).length>0) || (remote.presets && remote.presets.length>0));
+    if(hasData){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
+      state=loadState();
+      const m=sync.getMeta(); m.sha=j.sha; m.lastSync=Date.now(); m.dirty=false; sync.setMeta(m); sync.updateStatus();
+      render();
+    }
+  }catch(e){ console.warn('initialFetch failed',e); }
+}
+initialFetch();
+</script>
+</body>
+</html>
