@@ -592,8 +592,8 @@ function renderMA30() {
       </div>
       <div class="value" style="color:${ma30_clr}">${ma30_monthlyG}g</div>
     </div>
-    <div class="summary-row"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (g/日)</span><span class="count" style="color:${ma30_clr}">${ma30_avgG}g</span></div>
-    <div class="summary-row"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (杯/日)<span style="font-size:10px;color:#999;"> ※g÷20換算</span></span><span class="count">${ma30_avgCups}杯</span></div>
+    <div class="summary-row"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (g/日)</span><span class="count" style="color:${ma30_clr}">${ma30_avgG.toFixed(1)}g</span></div>
+    <div class="summary-row"><span class="emoji">🎯</span><span class="label-text">今日基点30日MA (杯/日)<span style="font-size:10px;color:#999;"> ※g÷20換算</span></span><span class="count">${ma30_avgCups.toFixed(1)}杯</span></div>
     <div class="summary-row" style="font-size:11px; color:#999; padding-top:0;"><span class="emoji" style="visibility:hidden">.</span><span class="label-text">記録日数: ${ma30.n}/30日</span><span class="count" style="font-weight:normal; color:#999;"></span></div>
   `;
 }
