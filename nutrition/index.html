@@ -110,7 +110,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
 <script src="sync.js"></script>
 <script>
 const STORAGE_KEY = 'nutrition_data';
-const TARGET = { kcal:1800, p:150, f:40, c:210 }; // P150g/C210g/F≤40g (pochi profile)
+const TARGET = { kcal:1800, p:120, f:40, fRed:60, c:210 }; // P120g/C210g目標, 脂質40超で黄・60超で赤
 
 const SEED_PRESETS = [
   { id:'seed_egg',   name:'卵 (M 1個)',        kcal:76,  p:6.2, f:5.2, c:0.2 },
@@ -171,10 +171,12 @@ function render(){
     `<small>${isToday?'今日':'タップで今日へ'}</small>`;
 
   const t=dayTotals();
-  const bar=(label,val,tgt,unit,ceil)=>{
-    const pct=Math.min(100, tgt? val/tgt*100 : 0);
-    let col='#2E7D32';
-    if(ceil){ col = val>tgt ? '#FF6B6B' : '#66BB6A'; }      // 脂質=上限(超で赤)
+  // ceil=true: tgt=黄ライン(目安), redT=赤ライン。バーは赤ライン基準で充填
+  const bar=(label,val,tgt,unit,ceil,redT)=>{
+    const denom = ceil ? (redT||tgt) : tgt;
+    const pct=Math.min(100, denom? val/denom*100 : 0);
+    let col;
+    if(ceil){ col = val>redT ? '#FF6B6B' : (val>tgt ? '#FFA726' : '#66BB6A'); }
     else { col = val>=tgt ? '#2E7D32' : '#66BB6A'; }
     return `<div class="bar-row"><div class="lab"><span>${label}</span><span><b>${r1(val)}</b> / ${tgt}${unit}</span></div>
       <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
@@ -183,7 +185,7 @@ function render(){
     `<div class="kcal-big">${Math.round(t.kcal)} <small>/ ${TARGET.kcal} kcal</small></div>`+
     bar('🥩 タンパク質 P', t.p, TARGET.p, 'g', false)+
     bar('🍚 炭水化物 C', t.c, TARGET.c, 'g', false)+
-    bar('🧈 脂質 F (上限)', t.f, TARGET.f, 'g', true);
+    bar('🧈 脂質 F (40超黄/60超赤)', t.f, TARGET.f, 'g', true, TARGET.fRed);
 
   const items=dayItems();
   const el=document.getElementById('itemList');
