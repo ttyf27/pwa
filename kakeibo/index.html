@@ -168,7 +168,7 @@ button { font-family: inherit; }
     </div>
     <div class="input-row">
       <label>項目名</label>
-      <input type="text" id="inputName" placeholder="項目名を入力してください">
+      <input type="text" id="inputItem" placeholder="項目名を入力してください" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
     <div class="input-row label-amount amount" id="amountRow">
       <label class="label-expense" id="amountLabel">支出</label>
@@ -283,7 +283,7 @@ button { font-family: inherit; }
     </div>
     <div class="field">
       <label>項目名</label>
-      <input type="text" id="editName">
+      <input type="text" id="editItem" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
     <div class="field">
       <label>金額</label>
@@ -642,7 +642,7 @@ function selectCat(id) {
 function saveEntry() {
   // 長押し直後のclick抑制 (テンプレ登録と通常保存の二重実行を防ぐ)
   if (longPressFired) { longPressFired = false; return; }
-  const name = document.getElementById('inputName').value.trim();
+  const name = document.getElementById('inputItem').value.trim();
   const amount = parseInt(document.getElementById('inputAmount').value, 10);
   if (!amount || amount <= 0) { alert('金額を入力してください'); return; }
   if (inputType === 'transfer') {
@@ -659,7 +659,7 @@ function saveEntry() {
   flashSaved();
 }
 function resetInputForm() {
-  document.getElementById('inputName').value = '';
+  document.getElementById('inputItem').value = '';
   document.getElementById('inputAmount').value = '';
   document.getElementById('transferFrom').value = '';
   document.getElementById('transferTo').value = '';
@@ -702,7 +702,7 @@ function initLongPress() {
   btn.addEventListener('mouseleave', cancel);
 }
 function saveAsTemplate() {
-  const name = document.getElementById('inputName').value.trim();
+  const name = document.getElementById('inputItem').value.trim();
   const amount = parseInt(document.getElementById('inputAmount').value, 10);
   if (!amount || amount <= 0) { alert('テンプレート登録には金額が必要です'); return; }
   if (inputType === 'transfer') { alert('振替はテンプレート未対応です'); return; }
@@ -739,7 +739,7 @@ function applyTemplate(id) {
   const t = state.templates.find(x => x.id === id);
   if (!t) return;
   setInputType(t.type);
-  document.getElementById('inputName').value = t.name;
+  document.getElementById('inputItem').value = t.name;
   document.getElementById('inputAmount').value = t.amount;
   selectedCatId = t.catId;
   renderCatGrid();
@@ -829,7 +829,7 @@ function openEditModal(id) {
   editingEntryId = id;
   document.getElementById('editModalTitle').textContent = e.type === 'expense' ? '支出を編集' : (e.type === 'income' ? '収入を編集' : '振替を編集');
   document.getElementById('editDate').value = e.date;
-  document.getElementById('editName').value = e.name || '';
+  document.getElementById('editItem').value = e.name || '';
   document.getElementById('editAmount').value = e.amount;
   const catSelect = document.getElementById('editCat');
   if (e.type === 'transfer') {
@@ -849,7 +849,7 @@ function saveEditedEntry() {
   const e = state.entries.find(x => x.id === editingEntryId);
   if (!e) return;
   const newDate = document.getElementById('editDate').value;
-  const newName = document.getElementById('editName').value.trim();
+  const newName = document.getElementById('editItem').value.trim();
   const newAmount = parseInt(document.getElementById('editAmount').value, 10);
   if (!newDate || !newAmount || newAmount <= 0) { alert('日付と金額は必須です'); return; }
   e.date = newDate;
