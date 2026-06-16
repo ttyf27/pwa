@@ -1,4 +1,4 @@
-const CACHE = 'gokigen-v10';
+const CACHE = 'gokigen-v11';
 const ASSETS = ['./', './index.html', './manifest.json', './sync.js'];
 
 self.addEventListener('install', e => {
