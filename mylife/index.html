@@ -605,7 +605,7 @@ function renderHiitList(){
   if(!rows.length){ body='<div style="padding:30px;text-align:center;color:#999">直近3ヶ月のHIIT記録がありません</div>'; }
   else for(const r of rows){
     const [y,m,da]=r.date.split('-').map(Number); const wk=wkn[new Date(y,m-1,da).getDay()];
-    const z5 = r.z5_min!=null ? r.z5_min.toFixed(1) : '-';
+    const z5 = r.z5_min!=null ? (r.z5_min>18 ? '🔥'+r.z5_min.toFixed(1) : r.z5_min.toFixed(1)) : '-';
     const z5col = r.z5_min!=null && r.z5_min>=15 ? '#FF6B00' : '#1d1d1f';
     const occ = r.z4up_pct!=null ? Math.round(r.z4up_pct)+'%' : '-';
     body+=`<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 0.9fr 0.9fr;gap:4px;padding:11px 10px;border-bottom:1px solid #ececed;background:#fff;font-size:13px;align-items:center">
