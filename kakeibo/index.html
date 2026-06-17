@@ -263,6 +263,15 @@ button { font-family: inherit; }
   <div id="rankingBody"></div>
 </div>
 
+<div class="view" id="view-weekend">
+  <div class="header">
+    <span></span>
+    <div class="header-title">🍽️ 週末レストラン</div>
+    <span style="width:44px"></span>
+  </div>
+  <div id="weekendBody"></div>
+</div>
+
 <!-- Template picker modal -->
 <div class="modal-overlay" id="tmplPicker">
   <div class="modal-sheet">
@@ -307,6 +316,7 @@ button { font-family: inherit; }
   <button class="bn-btn" data-view="list" onclick="setView('list')"><span class="bn-icon">📋</span><span class="bn-label">一覧</span></button>
   <button class="bn-btn" data-view="cal" onclick="setView('cal')"><span class="bn-icon">📅</span><span class="bn-label">カレンダー</span></button>
   <button class="bn-btn" data-view="ranking" onclick="setView('ranking')"><span class="bn-icon">📊</span><span class="bn-label">行ってない店</span></button>
+  <button class="bn-btn" data-view="weekend" onclick="setView('weekend')"><span class="bn-icon">🍽️</span><span class="bn-label">週末外食</span></button>
   <button class="bn-btn" id="syncStatusBtn" style="font-size:11px; line-height:1.3;">⚙️ 未設定</button>
 </div>
 
@@ -408,7 +418,48 @@ function setView(name) {
   if (name === 'list') renderList();
   if (name === 'cal') renderCal();
   if (name === 'ranking') loadAndRenderRanking();
+  if (name === 'weekend') renderWeekend();
   window.scrollTo(0, 0);
+}
+
+// ========= 週末レストラン (直近3ヶ月・土日・食費≥¥2,000・新しい順) =========
+function renderWeekend() {
+  const TH = 2000; // レストラン目安(コンビニ/カフェ除外)
+  const cut = new Date(); cut.setMonth(cut.getMonth() - 3);
+  const cutStr = `${cut.getFullYear()}-${String(cut.getMonth()+1).padStart(2,'0')}-${String(cut.getDate()).padStart(2,'0')}`;
+  const wkn = ['日','月','火','水','木','金','土'];
+  const rows = (state.entries || []).filter(e => {
+    if (e.type === 'income' || e.type === 'transfer') return false;
+    if (e.catId !== 'food') return false;
+    if (!e.date || e.date < cutStr) return false;
+    const [y,m,d] = e.date.split('-').map(Number);
+    const wd = new Date(y, m-1, d).getDay();
+    if (wd !== 0 && wd !== 6) return false;
+    return (e.amount || 0) >= TH;
+  }).sort((a,b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
+
+  const body = document.getElementById('weekendBody');
+  let html = `<div style="background:#fff;margin:10px;padding:10px 14px;border-radius:12px;font-size:12px;color:#6e6e73;">直近3ヶ月の土日・食費 ¥${TH.toLocaleString()}以上(レストラン目安)を新しい順に。件数: ${rows.length}</div>`;
+  if (!rows.length) {
+    body.innerHTML = html + '<div style="text-align:center;color:#999;padding:30px;">該当する記録がありません</div>';
+    return;
+  }
+  let total = 0;
+  html += '<div style="margin:0 10px 10px;border-radius:12px;overflow:hidden;border:1px solid #e5e5ea;background:#fff;">';
+  for (const e of rows) {
+    total += e.amount || 0;
+    const [y,m,d] = e.date.split('-').map(Number);
+    const wd = wkn[new Date(y, m-1, d).getDay()];
+    const wcol = wd === '日' ? '#FF6B6B' : '#4DABF7';
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #f0f0f0;">
+      <span style="font-size:12px;color:#6e6e73;white-space:nowrap">${m}/${d}<span style="color:${wcol};font-weight:600">(${wd})</span></span>
+      <span style="flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(e.name || '(名称なし)')}</span>
+      <span style="font-weight:700;white-space:nowrap">¥${(e.amount||0).toLocaleString()}</span>
+    </div>`;
+  }
+  html += '</div>';
+  html += `<div style="margin:0 10px 30px;text-align:right;font-size:12px;color:#6e6e73;">合計 <b style="color:#1d1d1f">¥${total.toLocaleString()}</b></div>`;
+  body.innerHTML = html;
 }
 
 // ========= ランキング (Lazy load + localStorage cache) =========
