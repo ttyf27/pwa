@@ -1,4 +1,4 @@
-const CACHE = 'nutrition-v8';
+const CACHE = 'nutrition-v9';
 const ASSETS = ['./', './index.html', './manifest.json', './sync.js'];
 
 self.addEventListener('install', e => {
