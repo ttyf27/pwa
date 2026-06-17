@@ -199,13 +199,15 @@ function renderHist(){
     const kc = t.kcal>TARGET.kcal?'#FF6B6B':(t.kcal>TARGET.cut?'#FFA726':'#2E7D32');
     const pc = t.p>=TARGET.p?'#2E7D32':'#6e6e73';
     const fc = t.f>TARGET.fRed?'#FF6B6B':(t.f>TARGET.f?'#FFA726':'#6e6e73');
-    html+=`<div onclick="jumpToDay('${d}')" style="padding:9px 0;border-top:1px solid #f0f0f0;cursor:pointer">
+    html+=`<div onclick="jumpToDay('${d}')" style="padding:10px 0;border-top:1px solid #f0f0f0;cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <span style="font-weight:600">${m}/${da}（${wk}）</span>
-        <span><b style="color:${kc};font-size:16px">${Math.round(t.kcal)}</b> <span style="font-size:11px;color:#999">kcal</span></span>
+        <span style="text-align:right">
+          <b style="color:${pc};font-size:19px">P ${r1(t.p)}</b><span style="font-size:11px;color:#999">/${TARGET.p}g</span>
+          &nbsp;&nbsp;<b style="color:${kc};font-size:15px">${Math.round(t.kcal)}</b><span style="font-size:10px;color:#999">kcal</span>
+        </span>
       </div>
-      <div style="font-size:12px;margin-top:2px">
-        <span style="color:${pc}">P ${r1(t.p)}</span> ・
+      <div style="font-size:12px;margin-top:3px;text-align:right">
         <span style="color:${fc}">F ${r1(t.f)}</span> ・
         <span style="color:#6e6e73">C ${r1(t.c)}</span> <span style="color:#bbb">g</span>
       </div>
