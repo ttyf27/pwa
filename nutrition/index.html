@@ -123,11 +123,13 @@ const STORAGE_KEY = 'nutrition_data';
 const TARGET = { kcal:2700, cut:2580, p:120, f:40, fRed:60, c:210 }; // kcal2700=普通, cut2580=2ヶ月で-1kgの減量ライン
 
 const SEED_PRESETS = [
-  { id:'seed_egg',   name:'卵 (M 1個)',        kcal:76,  p:6.2, f:5.2, c:0.2 },
-  { id:'seed_natto', name:'納豆 (1パック45g)', kcal:90,  p:8.3, f:4.5, c:5.4 },
-  { id:'seed_rice',  name:'白米 (茶碗1杯150g)',kcal:234, p:3.8, f:0.5, c:51.9 },
-  { id:'seed_tofu',  name:'木綿豆腐 (1/2丁)',  kcal:110, p:10,  f:7,   c:2 },
-  { id:'seed_pro',   name:'プロテイン (1杯)',  kcal:120, p:24,  f:1.5, c:3 },
+  { id:'seed_egg',     name:'卵 (M 1個)',          kcal:76,  p:6.2,  f:5.2,  c:0.2 },
+  { id:'seed_natto',   name:'納豆 (1パック45g)',   kcal:90,  p:8.3,  f:4.5,  c:5.4 },
+  { id:'seed_pro',     name:'プロテイン (1杯)',    kcal:120, p:24,   f:1.5,  c:3 },
+  { id:'seed_onsen',   name:'温泉たまご (1個)',     kcal:62,  p:5.8,  f:4.1,  c:0.6 },
+  { id:'seed_miso',    name:'味噌汁 (1食25.8g)',   kcal:57,  p:2.4,  f:2.4,  c:6.8 },
+  { id:'seed_butashabu',name:'豚しゃぶサラダ (1包装)',kcal:186, p:19.7, f:9.5,  c:6.3 },
+  { id:'seed_yakitori',name:'炭火焼鳥丼 (1包装)',  kcal:628, p:46.4, f:15.3, c:77.8 },
 ];
 
 let state = loadState();
