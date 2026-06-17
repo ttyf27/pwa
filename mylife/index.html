@@ -277,9 +277,17 @@ button { font-family: inherit; cursor: pointer; }
       <div class="info-row"><span class="lbl">最大 Z5</span><span class="val" id="hiitMax">-</span></div>
     </div>
   </div>
+  <button onclick="openHiitList()" style="width:100%;margin-top:12px;padding:10px;border:1px solid #e5e5ea;border-radius:10px;background:#fff;font-size:13px;font-weight:600;color:#FF9800;cursor:pointer">📋 直近3ヶ月のHIIT一覧 ›</button>
 </div>
 
-<!-- 疲労インジ -->
+<!-- HIIT一覧 オーバーレイ -->
+<div id="hiitListOverlay" style="display:none;position:fixed;inset:0;background:#f5f5f7;z-index:200;overflow-y:auto;">
+  <div style="position:sticky;top:0;background:#fff;border-bottom:1px solid #d2d2d7;display:flex;align-items:center;gap:10px;padding:14px 16px;padding-top:max(14px,env(safe-area-inset-top));">
+    <button onclick="closeHiitList()" style="background:#f0f0f0;border:none;border-radius:8px;padding:8px 12px;font-size:15px;cursor:pointer;min-height:40px">‹ 戻る</button>
+    <span style="font-weight:700;font-size:16px">🔥 HIIT 直近3ヶ月</span>
+  </div>
+  <div id="hiitListBody" style="padding:8px 10px 40px"></div>
+</div>
 <div class="card">
   <div class="card-title">🧭 疲労インジ</div>
   <div class="fatigue-grid">
@@ -529,8 +537,14 @@ function parseGarminFromCsv(csv) {
   const idxRhr = header.indexOf('resting_hr');
   const idxBb = header.indexOf('bb_max');
   const idxCh = header.indexOf('bb_charged');
+  const idxHd = header.indexOf('hiit_duration_min');
+  const idxHz5 = header.indexOf('hiit_z5_min');
+  const idxHz45 = header.indexOf('hiit_z45_min');
+  const idxHavg = header.indexOf('hiit_avg_hr');
+  const idxHmax = header.indexOf('hiit_max_hr');
   let latestSleep = null, latestRhr = null;
   const series = []; // 直近の全行 (date, bb_max, bb_charged, resting_hr, sleep_score) を配列で保持
+  const hiitDays = []; // HIITのあった日 (date, z5_min, z4up_pct, avg_hr, max_hr)
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(',');
     const date = cols[idxDate];
@@ -546,6 +560,21 @@ function parseGarminFromCsv(csv) {
       rhr: !isNaN(rh) ? rh : null,
       sleep_score: !isNaN(sc) && sc > 0 ? sc : null,
     });
+    // HIIT行: duration か avg_hr があれば「その日HIITあり」とみなす
+    const dur = idxHd >= 0 ? parseFloat(cols[idxHd]) : NaN;
+    const z5 = idxHz5 >= 0 ? parseFloat(cols[idxHz5]) : NaN;
+    const z45 = idxHz45 >= 0 ? parseFloat(cols[idxHz45]) : NaN;
+    const ahr = idxHavg >= 0 ? parseFloat(cols[idxHavg]) : NaN;
+    const mhr = idxHmax >= 0 ? parseFloat(cols[idxHmax]) : NaN;
+    if ((!isNaN(dur) && dur > 0) || (!isNaN(ahr) && ahr > 0)) {
+      hiitDays.push({
+        date,
+        z5_min: !isNaN(z5) ? z5 : null,
+        z4up_pct: (!isNaN(z45) && !isNaN(dur) && dur > 0) ? (z45 / dur * 100) : null,
+        avg_hr: !isNaN(ahr) ? Math.round(ahr) : null,
+        max_hr: !isNaN(mhr) ? Math.round(mhr) : null,
+      });
+    }
   }
   // 末尾から最新の non-empty を拾う
   for (let i = series.length - 1; i >= 0; i--) {
@@ -558,7 +587,39 @@ function parseGarminFromCsv(csv) {
     }
     if (latestSleep && latestRhr) break;
   }
-  return { latestSleep, latestRhr, series };
+  return { latestSleep, latestRhr, series, hiitDays };
+}
+
+// ===== HIIT 直近3ヶ月 一覧ページ =====
+function openHiitList(){ renderHiitList(); document.getElementById('hiitListOverlay').style.display='block'; window.scrollTo(0,0); }
+function closeHiitList(){ document.getElementById('hiitListOverlay').style.display='none'; }
+function renderHiitList(){
+  const days = (allData.garmin && allData.garmin.hiitDays) || [];
+  const cut = new Date(); cut.setMonth(cut.getMonth()-3);
+  const cutStr = `${cut.getFullYear()}-${String(cut.getMonth()+1).padStart(2,'0')}-${String(cut.getDate()).padStart(2,'0')}`;
+  const rows = days.filter(d => d.date >= cutStr).sort((a,b)=> a.date<b.date?1:-1);
+  const wkn=['日','月','火','水','木','金','土'];
+  const head = `<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 0.9fr 0.9fr;gap:4px;padding:8px 10px;font-size:11px;color:#6e6e73;font-weight:600;position:sticky;top:0;background:#f5f5f7">
+    <span>日付</span><span style="text-align:right">Z5(分)</span><span style="text-align:right">Z4↑占有</span><span style="text-align:right">平均</span><span style="text-align:right">最大</span></div>`;
+  let body='';
+  if(!rows.length){ body='<div style="padding:30px;text-align:center;color:#999">直近3ヶ月のHIIT記録がありません</div>'; }
+  else for(const r of rows){
+    const [y,m,da]=r.date.split('-').map(Number); const wk=wkn[new Date(y,m-1,da).getDay()];
+    const z5 = r.z5_min!=null ? r.z5_min.toFixed(1) : '-';
+    const z5col = r.z5_min!=null && r.z5_min>=15 ? '#FF6B00' : '#1d1d1f';
+    const occ = r.z4up_pct!=null ? Math.round(r.z4up_pct)+'%' : '-';
+    body+=`<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 0.9fr 0.9fr;gap:4px;padding:11px 10px;border-bottom:1px solid #ececed;background:#fff;font-size:13px;align-items:center">
+      <span style="font-weight:600">${m}/${da}<span style="color:#999;font-size:11px">(${wk})</span></span>
+      <span style="text-align:right;font-weight:700;color:${z5col};font-size:15px">${z5}</span>
+      <span style="text-align:right">${occ}</span>
+      <span style="text-align:right">${r.avg_hr??'-'}</span>
+      <span style="text-align:right;font-weight:600">${r.max_hr??'-'}</span>
+    </div>`;
+  }
+  document.getElementById('hiitListBody').innerHTML =
+    head + `<div style="border-radius:10px;overflow:hidden;border:1px solid #e5e5ea">${body}</div>` +
+    `<div style="font-size:10px;color:#999;margin-top:8px">Z4↑占有=(Z4+Z5滞在)÷運動時間。日別(同日複数HIITは合算)。出典: feature_matrix。</div>` +
+    `<div style="font-size:11px;color:#6e6e73;margin-top:4px">件数: ${rows.length}</div>`;
 }
 
 function parseKenshinFromCsv(csv) {
