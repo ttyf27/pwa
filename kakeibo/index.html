@@ -424,7 +424,7 @@ function setView(name) {
 
 // ========= 週末レストラン (直近3ヶ月・土日・食費≥¥2,000・新しい順) =========
 function renderWeekend() {
-  const TH = 2000; // レストラン目安(コンビニ/カフェ除外)
+  const TH = 3000; // レストラン目安(コンビニ/カフェ/軽食を除外)
   const cut = new Date(); cut.setMonth(cut.getMonth() - 3);
   const cutStr = `${cut.getFullYear()}-${String(cut.getMonth()+1).padStart(2,'0')}-${String(cut.getDate()).padStart(2,'0')}`;
   const wkn = ['日','月','火','水','木','金','土'];
