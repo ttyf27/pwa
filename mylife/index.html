@@ -601,19 +601,25 @@ function renderHiitList(){
   const wkn=['日','月','火','水','木','金','土'];
   const head = `<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 0.9fr 0.9fr;gap:4px;padding:8px 10px;font-size:11px;color:#6e6e73;font-weight:600;position:sticky;top:0;background:#f5f5f7">
     <span>日付</span><span style="text-align:right">Z5(分)</span><span style="text-align:right">Z4↑占有</span><span style="text-align:right">平均</span><span style="text-align:right">最大</span></div>`;
+  // 各列の3ヶ月最大値 (この値の行に👑)
+  const mx = key => rows.reduce((m,r)=> (r[key]!=null && r[key]>m) ? r[key] : m, -Infinity);
+  const maxZ5=mx('z5_min'), maxOcc=mx('z4up_pct'), maxAvg=mx('avg_hr'), maxMax=mx('max_hr');
+  const crown = (v,mxv)=> (v!=null && v===mxv) ? '👑' : '';
   let body='';
   if(!rows.length){ body='<div style="padding:30px;text-align:center;color:#999">直近3ヶ月のHIIT記録がありません</div>'; }
   else for(const r of rows){
     const [y,m,da]=r.date.split('-').map(Number); const wk=wkn[new Date(y,m-1,da).getDay()];
-    const z5 = r.z5_min!=null ? (r.z5_min>18 ? '🔥'+r.z5_min.toFixed(1) : r.z5_min.toFixed(1)) : '-';
+    const z5 = r.z5_min!=null ? (crown(r.z5_min,maxZ5) + (r.z5_min>18 ? '🔥' : '') + r.z5_min.toFixed(1)) : '-';
     const z5col = r.z5_min!=null && r.z5_min>=15 ? '#FF6B00' : '#1d1d1f';
-    const occ = r.z4up_pct!=null ? Math.round(r.z4up_pct)+'%' : '-';
+    const occ = r.z4up_pct!=null ? crown(r.z4up_pct,maxOcc)+Math.round(r.z4up_pct)+'%' : '-';
+    const avg = r.avg_hr!=null ? crown(r.avg_hr,maxAvg)+r.avg_hr : '-';
+    const mxhr = r.max_hr!=null ? crown(r.max_hr,maxMax)+r.max_hr : '-';
     body+=`<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 0.9fr 0.9fr;gap:4px;padding:11px 10px;border-bottom:1px solid #ececed;background:#fff;font-size:13px;align-items:center">
       <span style="font-weight:600">${m}/${da}<span style="color:#999;font-size:11px">(${wk})</span></span>
       <span style="text-align:right;font-weight:700;color:${z5col};font-size:15px">${z5}</span>
       <span style="text-align:right">${occ}</span>
-      <span style="text-align:right">${r.avg_hr??'-'}</span>
-      <span style="text-align:right;font-weight:600">${r.max_hr??'-'}</span>
+      <span style="text-align:right">${avg}</span>
+      <span style="text-align:right;font-weight:600">${mxhr}</span>
     </div>`;
   }
   document.getElementById('hiitListBody').innerHTML =
