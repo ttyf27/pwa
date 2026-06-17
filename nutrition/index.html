@@ -63,7 +63,10 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
 <body>
 <div class="header">
   <div class="header-title">🥗 PFC / カロリー</div>
-  <button class="sync-btn" id="syncStatusBtn">⚙️</button>
+  <div style="display:flex;gap:6px">
+    <button class="sync-btn" id="refreshBtn" onclick="initialFetch(true)" title="最新を取得">🔄</button>
+    <button class="sync-btn" id="syncStatusBtn">⚙️</button>
+  </div>
 </div>
 
 <div style="display:flex;gap:6px;padding:8px 12px;background:#fff;border-bottom:1px solid #f0f0f0;">
@@ -339,24 +342,34 @@ sync.attachStatusElement(document.getElementById('syncStatusBtn'));
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 render();
 
-// 起動時に repo から読み戻す (空localStorageが空pushでrepoを上書きするのを防ぐ / server-wins)
-async function initialFetch(){
-  const pat=sync.getPat(); if(!pat) return;
+// 起動時 & 🔄 で repo から読み戻す。上書きではなくマージ:
+//  presets = サーバ∪ローカル (新規プリセットを取り込みつつローカルの自作も保持)
+//  days    = サーバ∪ローカル (同日はローカル優先=未同期の当日編集を守る / 空localで空pushする事故も防ぐ)
+async function initialFetch(manual){
+  const pat=sync.getPat();
+  if(!pat){ if(manual) alert('先に⚙️でPAT(GitHubトークン)を設定してください'); return; }
   try{
     const url=`https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
     const res=await fetch(url,{cache:'no-store',headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
-    if(!res.ok) return;
+    if(!res.ok){ if(manual) alert('取得に失敗しました ('+res.status+')'); return; }
     const j=await res.json();
     const remote=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
     const hasData = remote && ((remote.days && Object.keys(remote.days).length>0) || (remote.presets && remote.presets.length>0));
     if(hasData){
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
+      const local = loadState();
+      const map={};
+      for(const p of (remote.presets||[])) map[p.id||p.name]=p;
+      for(const p of (local.presets||[])){ const k=p.id||p.name; if(!(k in map)) map[k]=p; }
+      const days = Object.assign({}, remote.days||{}, local.days||{}); // 同日はローカル優先
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ days, presets:Object.values(map) }));
       state=loadState();
       const m=sync.getMeta(); m.sha=j.sha; m.lastSync=Date.now(); m.dirty=false; sync.setMeta(m); sync.updateStatus();
       render();
-    }
-  }catch(e){ console.warn('initialFetch failed',e); }
+      if(manual) flashRefresh();
+    } else if(manual){ alert('サーバにデータがありません'); }
+  }catch(e){ console.warn('initialFetch failed',e); if(manual) alert('更新に失敗: '+e.message); }
 }
+function flashRefresh(){ const b=document.getElementById('refreshBtn'); if(!b) return; b.textContent='✓'; setTimeout(()=>{ b.textContent='🔄'; },1200); }
 initialFetch();
 </script>
 </body>
