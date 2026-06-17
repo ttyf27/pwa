@@ -1240,7 +1240,7 @@ function renderMonthProgress() {
     }
     const alertCls = sixPlusDays > 0 ? 'alert' : (fourPlusDays > 0 ? 'warn' : 'ok');
     const ext = document.getElementById('progAlcExtra');
-    ext.innerHTML = `🍺 今月 4+杯日 <b>${fourPlusDays}日</b>（6+杯 ${sixPlusDays}日）`;
+    ext.innerHTML = `🍺 今月 4+杯日 <b>${fourPlusDays}日</b><br>（6+杯 ${sixPlusDays}日）`;
     ext.className = 'p-extra ' + alertCls;
   } else {
     document.getElementById('progAlcCur').textContent = '-';
