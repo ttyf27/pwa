@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="timelog">
+<meta name="theme-color" content="#5E35B1">
+<link rel="manifest" href="manifest.json">
+<title>timelog</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif; background:#f5f5f7; color:#1d1d1f; padding-bottom:40px; min-height:100vh; }
+.header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:#fff; border-bottom:1px solid #d2d2d7; position:sticky; top:0; z-index:10; padding-top:max(14px,env(safe-area-inset-top)); }
+.header-title { font-size:18px; font-weight:700; }
+.btns { display:flex; gap:6px; }
+.hbtn { font-size:12px; background:#f0f0f0; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; min-height:36px; }
+.card { background:#fff; margin:8px; padding:14px 16px; border-radius:12px; border:1px solid #e5e5ea; }
+.period { font-size:12px; color:#6e6e73; }
+.catrow { padding:10px 0; border-top:1px solid #f0f0f0; }
+.catrow:first-child { border-top:none; }
+.cattop { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+.catname { font-weight:600; font-size:14px; }
+.cathours { font-size:16px; font-weight:800; }
+.cathours small { font-size:11px; color:#999; font-weight:500; }
+.delta { font-size:12px; font-weight:700; margin-left:6px; }
+.up { color:#2E7D32; } .down { color:#FF6B6B; } .neu { color:#999; }
+.bar-bg { height:12px; background:#ececed; border-radius:6px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:6px; }
+.muted { font-size:11px; color:#999; line-height:1.5; margin-top:10px; }
+.daily { overflow-x:auto; }
+.daily table { border-collapse:collapse; font-size:11px; min-width:100%; }
+.daily th, .daily td { padding:5px 6px; text-align:right; white-space:nowrap; border-top:1px solid #f0f0f0; }
+.daily th:first-child, .daily td:first-child { text-align:left; position:sticky; left:0; background:#fff; }
+.sectitle { font-weight:700; font-size:13px; margin-bottom:6px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-title">⏱️ timelog</div>
+  <div class="btns">
+    <button class="hbtn" id="reloadBtn" onclick="load(true)" title="再取得">🔄</button>
+    <button class="hbtn" id="syncStatusBtn">⚙️</button>
+  </div>
+</div>
+
+<div class="card" id="periodCard"><div class="period" id="period">読み込み中…</div></div>
+<div class="card" id="catCard"></div>
+<div class="card" id="dailyCard" style="display:none"></div>
+
+<script src="sync.js"></script>
+<script>
+const STORAGE_KEY = 'timelog_cache';
+// カテゴリの「良い方向」: 増えると良い=up / 減ると良い=down / 中立=neutral
+const GOOD = { '𝕏 SNS':'down', '🤖 開発/学習':'up', '📖 読書':'up', '💪 運動':'up', '🏢 仕事':'neutral', '💤 睡眠':'up' };
+const COLOR = { '𝕏 SNS':'#E0245E', '🤖 開発/学習':'#1565C0', '📖 読書':'#2E7D32', '💪 運動':'#FB8C00', '🏢 仕事':'#6A1B9A', '💤 睡眠':'#00838F' };
+
+const sync = new GitHubSync({
+  appName:'timelog', repoOwner:'ttyf27', repoName:'mylife',
+  filePath:'data/pwa/timelog.json', branch:'claude/garmin-data-analysis-V2xrD',
+  getData: () => ({}), // 表示専用(pushしない)
+});
+sync.attachStatusElement(document.getElementById('syncStatusBtn'));
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+
+function fmtMD(s){ const [,m,d]=s.split('-'); return `${+m}/${+d}`; }
+
+function render(data){
+  if(!data){ document.getElementById('period').textContent='データなし(「今週集計して」でClaudeが生成します)'; return; }
+  const cats = data.cats || Object.keys(data.this.totals);
+  const t = data.this.totals, p = (data.prev&&data.prev.totals)||{};
+  document.getElementById('period').innerHTML =
+    `📅 今週 <b>${fmtMD(data.this.start)}〜${fmtMD(data.this.end)}</b>` +
+    (data.prev?` <span style="color:#bbb">/ 前週 ${fmtMD(data.prev.start)}〜${fmtMD(data.prev.end)}比</span>`:'') +
+    `<br><span style="color:#bbb;font-size:11px">更新: ${data.generated_at||'-'}(更新は「今週集計して」)</span>`;
+
+  const maxh = Math.max(1, ...cats.map(c=>t[c]||0));
+  document.getElementById('catCard').innerHTML = cats.map(c=>{
+    const cur=t[c]||0, prev=p[c]||0, d=Math.round((cur-prev)*10)/10;
+    const dir=GOOD[c]||'neutral';
+    let cls='neu', arrow='→';
+    if(d>0.05){ arrow='▲'+d.toFixed(1); cls = dir==='up'?'up':(dir==='down'?'down':'neu'); }
+    else if(d<-0.05){ arrow='▼'+Math.abs(d).toFixed(1); cls = dir==='down'?'up':(dir==='up'?'down':'neu'); }
+    else { arrow='±0'; cls='neu'; }
+    const col=COLOR[c]||'#888';
+    return `<div class="catrow">
+      <div class="cattop">
+        <span class="catname">${c}</span>
+        <span><span class="cathours">${cur.toFixed(1)}</span><small>h</small>${data.prev?`<span class="delta ${cls}">${arrow}</span>`:''}</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${cur/maxh*100}%;background:${col}"></div></div>
+    </div>`;
+  }).join('') + `<div class="muted">▲▼の色: 緑=良い方向 / 赤=逆方向(SNSは減=緑、読書/開発/運動/睡眠は増=緑、仕事は中立)。1日平均は時間÷7。</div>`;
+
+  // 日別
+  if(data.this.daily && Object.keys(data.this.daily).length){
+    const days=Object.keys(data.this.daily).sort();
+    let h=`<div class="sectitle">📊 日別 (h)</div><div class="daily"><table><tr><th>日</th>${cats.map(c=>`<th>${c.split(' ')[0]}</th>`).join('')}</tr>`;
+    for(const dd of days){
+      h+=`<tr><td>${fmtMD(dd)}</td>${cats.map(c=>{const v=(data.this.daily[dd][c]||0);return `<td>${v?v.toFixed(1):'·'}</td>`}).join('')}</tr>`;
+    }
+    h+='</table></div>';
+    const dc=document.getElementById('dailyCard'); dc.style.display='block'; dc.innerHTML=h;
+  }
+}
+
+async function load(manual){
+  const cached = localStorage.getItem(STORAGE_KEY);
+  if(cached){ try{ render(JSON.parse(cached)); }catch(e){} }
+  const pat = sync.getPat();
+  if(!pat){ if(manual) alert('⚙️でPATを設定してください'); if(!cached) document.getElementById('period').textContent='⚙️でPATを設定してください'; return; }
+  try{
+    const url=`https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
+    const res=await fetch(url,{cache:'no-store',headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
+    if(!res.ok){ if(manual) alert('取得失敗 ('+res.status+')'); return; }
+    const j=await res.json();
+    const data=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    render(data);
+    if(manual){ const b=document.getElementById('reloadBtn'); b.textContent='✓'; setTimeout(()=>b.textContent='🔄',1000); }
+  }catch(e){ console.warn('load failed',e); if(manual) alert('エラー: '+e.message); }
+}
+load();
+</script>
+</body>
+</html>
