@@ -102,6 +102,13 @@ class GitHubSync {
         throw new Error(`GET ${getRes.status}: ${errBody.slice(0, 200)}`);
       }
 
+      // 🛡 空データ保護: ローカルにエントリが無いのにサーバにファイルがある場合は上書きしない
+      // (新端末で初回pullする前にpushして中身を消す事故を防ぐ)
+      if ((!data.entries || data.entries.length === 0) && currentSha) {
+        const m = this.getMeta(); m.lastError = '空のためpushスキップ。先に取得してください'; m.dirty = false;
+        this.setMeta(m); this._pushing = false; this.updateStatus(); return;
+      }
+
       const body = {
         message: `${this.appName}: sync ${new Date().toISOString()}`,
         content: dataB64,
