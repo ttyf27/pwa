@@ -361,7 +361,15 @@ async function initialFetch(manual){
       // 名前キーで統合(同名は重複させない。サーバ版を優先)
       for(const p of (remote.presets||[])) map[p.name]=p;
       for(const p of (local.presets||[])){ if(!(p.name in map)) map[p.name]=p; }
-      const days = Object.assign({}, remote.days||{}, local.days||{}); // 同日はローカル優先
+      // 日別: 同じ日は「品目を合算(idで統合)」して両端末の追加を残す
+      const days = {};
+      const rd = remote.days || {}, ld = local.days || {};
+      for (const d of new Set([...Object.keys(rd), ...Object.keys(ld)])) {
+        const byId = {};
+        for (const it of (rd[d] || [])) byId[it.id] = it;
+        for (const it of (ld[d] || [])) byId[it.id] = it; // 同一idはローカル優先(数量編集を反映)
+        days[d] = Object.values(byId);
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ days, presets:Object.values(map) }));
       state=loadState();
       const m=sync.getMeta(); m.sha=j.sha; m.lastSync=Date.now(); m.dirty=false; sync.setMeta(m); sync.updateStatus();
