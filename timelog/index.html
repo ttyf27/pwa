@@ -53,8 +53,8 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
 <script>
 const STORAGE_KEY = 'timelog_cache';
 // カテゴリの「良い方向」: 増えると良い=up / 減ると良い=down / 中立=neutral
-const GOOD = { '𝕏 SNS':'down', '🤖 開発/学習':'up', '🔤 英語':'up', '📖 読書':'up', '💪 運動':'up', '🏢 仕事':'neutral', '💤 睡眠':'up' };
-const COLOR = { '𝕏 SNS':'#E0245E', '🤖 開発/学習':'#1565C0', '🔤 英語':'#3949AB', '📖 読書':'#2E7D32', '💪 運動':'#FB8C00', '🏢 仕事':'#6A1B9A', '💤 睡眠':'#00838F' };
+const GOOD = { '𝕏 SNS':'down', '👿 勉強':'up', '🔤 英語':'up', '📖 読書':'up', '🤖 開発/学習':'up', '💤 睡眠':'up' };
+const COLOR = { '𝕏 SNS':'#E0245E', '👿 勉強':'#8E24AA', '🔤 英語':'#3949AB', '📖 読書':'#2E7D32', '🤖 開発/学習':'#1565C0', '💤 睡眠':'#00838F' };
 
 const sync = new GitHubSync({
   appName:'timelog', repoOwner:'ttyf27', repoName:'mylife',
@@ -75,6 +75,7 @@ function render(data){
     (data.prev?` <span style="color:#bbb">/ 前週 ${fmtMD(data.prev.start)}〜${fmtMD(data.prev.end)}比</span>`:'') +
     `<br><span style="color:#bbb;font-size:11px">更新: ${data.generated_at||'-'}(更新は「今週集計して」)</span>`;
 
+  const nd = data.this.ndays || 7;
   const maxh = Math.max(1, ...cats.map(c=>t[c]||0));
   document.getElementById('catCard').innerHTML = cats.map(c=>{
     const cur=t[c]||0, prev=p[c]||0, d=Math.round((cur-prev)*10)/10;
@@ -87,11 +88,11 @@ function render(data){
     return `<div class="catrow">
       <div class="cattop">
         <span class="catname">${c}</span>
-        <span><span class="cathours">${cur.toFixed(1)}</span><small>h</small>${data.prev?`<span class="delta ${cls}">${arrow}</span>`:''}</span>
+        <span><span class="cathours">${cur.toFixed(1)}</span><small>h</small> <small style="color:#999">(${(cur/nd).toFixed(1)}/日)</small>${data.prev?`<span class="delta ${cls}">${arrow}</span>`:''}</span>
       </div>
       <div class="bar-bg"><div class="bar-fill" style="width:${cur/maxh*100}%;background:${col}"></div></div>
     </div>`;
-  }).join('') + `<div class="muted">▲▼の色: 緑=良い方向 / 赤=逆方向(SNSは減=緑、読書/開発/運動/睡眠は増=緑、仕事は中立)。1日平均は時間÷7。</div>`;
+  }).join('') + `<div class="muted">各行: トータルh ・(1日平均=÷${nd}日)。${data.prev?'▲▼色 緑=良い方向(SNSは減・他は増)。':''} 👿勉強は📖読書と二重計上しない(👿優先で1回)。</div>`;
 
   // 日別
   if(data.this.daily && Object.keys(data.this.daily).length){
