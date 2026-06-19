@@ -358,8 +358,9 @@ async function initialFetch(manual){
     if(hasData){
       const local = loadState();
       const map={};
-      for(const p of (remote.presets||[])) map[p.id||p.name]=p;
-      for(const p of (local.presets||[])){ const k=p.id||p.name; if(!(k in map)) map[k]=p; }
+      // 名前キーで統合(同名は重複させない。サーバ版を優先)
+      for(const p of (remote.presets||[])) map[p.name]=p;
+      for(const p of (local.presets||[])){ if(!(p.name in map)) map[p.name]=p; }
       const days = Object.assign({}, remote.days||{}, local.days||{}); // 同日はローカル優先
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ days, presets:Object.values(map) }));
       state=loadState();
