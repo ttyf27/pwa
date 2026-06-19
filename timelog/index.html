@@ -76,9 +76,12 @@ function render(data){
     `<br><span style="color:#bbb;font-size:11px">更新: ${data.generated_at||'-'}(更新は「今週集計して」)</span>`;
 
   const nd = data.this.ndays || 7;
-  const maxh = Math.max(1, ...cats.map(c=>t[c]||0));
+  const pnd = (data.prev && data.prev.ndays) || 7;
+  const avg = c => (t[c]||0)/nd;      // 1日平均(バー・見出しに使う)
+  const pavg = c => (p[c]||0)/pnd;
+  const maxh = Math.max(0.1, ...cats.map(c=>avg(c)));
   document.getElementById('catCard').innerHTML = cats.map(c=>{
-    const cur=t[c]||0, prev=p[c]||0, d=Math.round((cur-prev)*10)/10;
+    const cur=avg(c), prev=pavg(c), d=Math.round((cur-prev)*10)/10;
     const dir=GOOD[c]||'neutral';
     let cls='neu', arrow='→';
     if(d>0.05){ arrow='▲'+d.toFixed(1); cls = dir==='up'?'up':(dir==='down'?'down':'neu'); }
@@ -88,11 +91,11 @@ function render(data){
     return `<div class="catrow">
       <div class="cattop">
         <span class="catname">${c}</span>
-        <span><span class="cathours">${cur.toFixed(1)}</span><small>h</small> <small style="color:#999">(${(cur/nd).toFixed(1)}/日)</small>${data.prev?`<span class="delta ${cls}">${arrow}</span>`:''}</span>
+        <span><span class="cathours">${cur.toFixed(1)}</span><small>h/日</small> <small style="color:#999">(計${(t[c]||0).toFixed(1)}h)</small>${data.prev?`<span class="delta ${cls}">${arrow}</span>`:''}</span>
       </div>
       <div class="bar-bg"><div class="bar-fill" style="width:${cur/maxh*100}%;background:${col}"></div></div>
     </div>`;
-  }).join('') + `<div class="muted">各行: トータルh ・(1日平均=÷${nd}日)。${data.prev?'▲▼色 緑=良い方向(SNSは減・他は増)。':''} 👿勉強は📖読書と二重計上しない(👿優先で1回)。</div>`;
+  }).join('') + `<div class="muted">各行: バー=1日平均h/日(÷${nd}日) ・括弧=期間トータルh。${data.prev?'▲▼は1日平均の前週比、緑=良い方向(SNSは減・他は増)。':''} 👿勉強は📖読書と二重計上しない(👿優先で1回)。</div>`;
 
   // 日別
   if(data.this.daily && Object.keys(data.this.daily).length){
