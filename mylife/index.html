@@ -219,41 +219,10 @@ button { font-family: inherit; cursor: pointer; }
 
 <!-- 3軸サマリーは Garmin fetch タイミング都合で日次トラッキングと合わないため非表示 -->
 
-<!-- 直近トレンド -->
+<!-- 🍺 アルコール (純アル/日 + 累計 + 月末着地 統合) -->
 <div class="card">
-  <div class="card-title">📈 直近トレンド</div>
-  <div class="ma-grid">
-    <div class="ma-cell">
-      <div class="ma-label">🍺 純アル/日</div>
-      <div class="ma-value" id="maAlcG">-</div>
-      <div class="ma-sub" id="maAlcSub"></div>
-    </div>
-    <div class="ma-cell">
-      <div class="ma-label">💴 支出/日 (平日)</div>
-      <div class="ma-value" id="maExp">-</div>
-      <div class="ma-sub" id="maExpSub"></div>
-    </div>
-  </div>
-</div>
-
-<!-- 今月の進捗 (BB MAX 直近30日平均 / アルコール 月末着地予測) -->
-<div class="card">
-  <div class="card-title">📅 今月の進捗</div>
-  <div class="progress-grid">
-    <div class="progress-cell" id="progBb">
-      <div class="p-label">🔋 BB MAX 直近30日平均</div>
-      <div class="p-val" id="progBbCur">-</div>
-      <div class="p-sub" id="progBbSub"></div>
-      <div class="p-judge" id="progBbJudge"></div>
-    </div>
-    <div class="progress-cell" id="progAlc">
-      <div class="p-label">🍺 アルコール累計</div>
-      <div class="p-val" id="progAlcCur">-</div>
-      <div class="p-sub" id="progAlcSub"></div>
-      <div class="p-judge" id="progAlcJudge"></div>
-      <div class="p-extra" id="progAlcExtra"></div>
-    </div>
-  </div>
+  <div class="card-title">🍺 アルコール</div>
+  <div id="alcUnified">-</div>
 </div>
 
 <!-- HIIT Z5 リング -->
@@ -695,8 +664,7 @@ function updateStatus(t, isErr) {
 function renderAll() {
   const td = new Date();
   document.getElementById('todayLabel').textContent = `${td.getFullYear()}/${td.getMonth()+1}/${td.getDate()}(${weekday(td)})`;
-  renderMA();
-  renderMonthProgress();
+  renderAlcUnified();
   renderZekkocho();
   renderHiitRing();
   renderFatigueIndicator();
@@ -1314,6 +1282,42 @@ function renderMonthProgress() {
     document.getElementById('progAlcSub').textContent = 'データなし';
     document.getElementById('progAlcJudge').textContent = '';
   }
+}
+
+// ===== 🍺 アルコール統合 (純アル/日 + 累計 + 月末着地) =====
+function renderAlcUnified() {
+  const el = document.getElementById('alcUnified');
+  if (!el) return;
+  const G_PER_CUP = 15;
+  const today = new Date();
+  const ym = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const todayDay = today.getDate();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
+  const remaining = daysInMonth - todayDay;
+  const dpg = (allData.alcohol && allData.alcohol.dailyPureG) || {};
+  // 今月の現時点累計
+  let alcGSum = 0, alcDays = 0;
+  for (let d = 1; d <= todayDay; d++) {
+    const key = `${ym}-${String(d).padStart(2,'0')}`;
+    if (dpg[key] != null) { alcGSum += dpg[key]; alcDays++; }
+  }
+  // 1日あたり平均 = 直近30日平均 (g/日)。月末着地もこの平均で外挿
+  const past30G = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (dpg[key] != null) past30G.push(dpg[key]);
+  }
+  if (alcDays === 0 || past30G.length === 0) { el.innerHTML = '<div style="color:#999;font-size:13px">データなし</div>'; return; }
+  const dailyAvg = past30G.reduce((a,b)=>a+b,0) / past30G.length;
+  const projG = alcGSum + dailyAvg * remaining;
+  const projColor = projG < 750 ? '#4CAF50' : (projG < 1100 ? '#FFC107' : '#FF6B6B');
+  el.innerHTML =
+    `<div style="font-size:14px;color:#1d1d1f">`+
+      `1日あたり平均 <b style="font-size:24px">${dailyAvg.toFixed(1)}</b><span style="font-size:12px;color:#999">g</span>`+
+      ` ／ 現時点累計 <b style="font-size:20px">${Math.round(alcGSum)}</b><span style="font-size:12px;color:#999">g</span>`+
+    `</div>`+
+    `<div style="font-size:14px;margin-top:8px">月末着地 : <b style="font-size:20px;color:${projColor}">${Math.round(projG)}g</b></div>`;
 }
 
 // ===== 言語ヘルス (§31-A64) =====
