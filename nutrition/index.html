@@ -179,6 +179,55 @@ function totalsFor(key){
 function dayTotals(){ return totalsFor(ymd(curDate)); }
 function r1(x){ return Math.round(x*10)/10; }
 
+// ===== 代謝力スコア (GOOD ENERGY / Casey Means 準拠) =====
+// 5本柱: 血糖を上げない(精製糖質回避) / 食物繊維・未加工 / オメガ3・脱揚げ物 / タンパク質 / 脱アルコール
+const MS = {
+  ALC:/ハイボール|ワイン|ビール|サワー|焼酎|日本酒|チューハイ|ウイスキー|梅酒|酒/,
+  OMEGA3:/さば|サバ|鯖|いわし|鰯|さんま|秋刀魚|鮭|サーモン|まぐろ|マグロ|ぶり|ブリ|あじ|アジ|納豆|卵|たまご|玉子|アボカド|ナッツ|くるみ|アーモンド|えごま|亜麻|チア/,
+  FRIED:/揚げ|から揚げ|唐揚げ|フライ|とんかつ|トンカツ|カツ|天ぷら|コロッケ|ポテト|フライド/,
+  REFINED:/ラーメン|うどん|そば|パスタ|丼|ごはん|ご飯|白米|パン|麺|チャーハン|焼きそば|ピザ|菓子|スイーツ|ケーキ|ドーナツ|アイス|餅/,
+  WHOLE:/サラダ|野菜|わかめ|ワカメ|海藻|もずく|めかぶ|きのこ|キャベツ|ブロッコリー|ほうれん|豆|ひじき|オクラ|トマト|レタス|納豆|きゅうり|大根|おろし|キムチ|味噌/,
+};
+function clampN(x,lo,hi){ lo=lo===undefined?0:lo; hi=hi===undefined?1:hi; return Math.max(lo,Math.min(hi,x)); }
+function metabScore(items){
+  let P=0,C=0,K=0,alc=0,refC=0,nO=0,nFr=0,nW=0;
+  for(const it of (items||[])){
+    const q=it.qty||1, nm=it.name||'';
+    P+=(it.p||0)*q; C+=(it.c||0)*q; K+=(it.kcal||0)*q;
+    const a=MS.ALC.test(nm);
+    if(a) alc+=(it.kcal||0)*q;
+    if(MS.REFINED.test(nm)&&!a) refC+=(it.c||0)*q;
+    if(MS.OMEGA3.test(nm)) nO++;
+    if(MS.FRIED.test(nm)) nFr++;
+    if(MS.WHOLE.test(nm)) nW++;
+  }
+  if(K<=0) return null;
+  const refShare=C>0?refC/C:0;
+  const g=3*clampN(1-refShare)*clampN(0.6+0.4*clampN(P/120));      // 血糖 0-3
+  const w=2*clampN(nW/3);                                           // 繊維/未加工 0-2
+  const ft=clampN(clampN(nO/2)*2-clampN(nFr/2)*2,0,2);             // オメガ3/脂質 0-2
+  const pr=2*clampN(P/120);                                         // タンパク質 0-2
+  const al=clampN(1-(alc/K)/0.20);                                 // 非アルコール 0-1
+  return {total:g+w+ft+pr+al,g,w,ft,pr,al,refShare,alcShare:alc/K};
+}
+function scoreColor(t){ return t>=8?'#2E7D32':(t>=6?'#FFA726':'#FF6B6B'); }
+function scoreBlock(items){
+  const s=metabScore(items); if(!s) return '';
+  const col=scoreColor(s.total);
+  const pill=(lab,val,max)=>`<div style="flex:1;text-align:center">`+
+    `<div style="font-size:9px;color:#999">${lab}</div>`+
+    `<div style="font-size:13px;font-weight:700">${r1(val)}<span style="font-size:8px;color:#bbb">/${max}</span></div>`+
+    `<div class="bar-bg" style="height:4px;margin-top:2px"><div class="bar-fill" style="width:${clampN(val/max)*100}%;background:${col}"></div></div></div>`;
+  return `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #eee">`+
+    `<div style="display:flex;justify-content:space-between;align-items:baseline">`+
+      `<span style="font-weight:700;font-size:13px">🔋 代謝力スコア <span style="font-size:9px;color:#999;font-weight:400">GOOD ENERGY</span></span>`+
+      `<span style="font-size:22px;font-weight:800;color:${col}">${r1(s.total)}<span style="font-size:12px;color:#999">/10</span></span></div>`+
+    `<div style="display:flex;gap:6px;margin-top:6px">`+
+      pill('血糖',s.g,3)+pill('繊維',s.w,2)+pill('Ω3脂質',s.ft,2)+pill('P',s.pr,2)+pill('脱酒',s.al,1)+`</div>`+
+    `<div style="font-size:9px;color:#999;margin-top:6px">精製糖質を上げない・繊維/未加工・オメガ3/脱揚げ物・タンパク質・脱アルコール。精製C ${Math.round(s.refShare*100)}% ・ 酒 ${Math.round(s.alcShare*100)}%</div>`+
+  `</div>`;
+}
+
 // ===== メインタブ (記録 / 日別一覧) =====
 function setMainTab(t){
   const day = t==='day';
@@ -202,9 +251,11 @@ function renderHist(){
     const kc = t.kcal>TARGET.kcal?'#FF6B6B':(t.kcal>TARGET.cut?'#FFA726':'#2E7D32');
     const pc = t.p>=TARGET.p?'#2E7D32':'#6e6e73';
     const fc = t.f>TARGET.fRed?'#FF6B6B':(t.f>TARGET.f?'#FFA726':'#6e6e73');
+    const ms=metabScore(state.days[d]||[]);
+    const msBadge = ms?`<span style="font-size:13px;font-weight:800;color:${scoreColor(ms.total)}">🔋${r1(ms.total)}</span><span style="font-size:9px;color:#bbb">/10</span>`:'';
     html+=`<div onclick="jumpToDay('${d}')" style="padding:10px 0;border-top:1px solid #f0f0f0;cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <span style="font-weight:600">${m}/${da}（${wk}）</span>
+        <span style="font-weight:600">${m}/${da}（${wk}） ${msBadge}</span>
         <span style="text-align:right">
           <b style="color:${pc};font-size:19px">P ${r1(t.p)}</b><span style="font-size:11px;color:#999">/${TARGET.p}g</span>
           &nbsp;&nbsp;<b style="color:${kc};font-size:15px">${Math.round(t.kcal)}</b><span style="font-size:10px;color:#999">kcal</span>
@@ -251,7 +302,8 @@ function render(){
     `<div style="font-size:10px;color:#6e6e73;margin-top:3px">🔻 ${TARGET.cut}kcal=減量ライン(2ヶ月で-1kg) ／ 満タン=普通 ${TARGET.kcal}</div>`+
     bar('🥩 タンパク質 P', t.p, TARGET.p, 'g', false)+
     bar('🍚 炭水化物 C', t.c, TARGET.c, 'g', false)+
-    bar('🧈 脂質 F (40超黄/60超赤)', t.f, TARGET.f, 'g', true, TARGET.fRed);
+    bar('🧈 脂質 F (40超黄/60超赤)', t.f, TARGET.f, 'g', true, TARGET.fRed)+
+    scoreBlock(dayItems());
 
   const items=dayItems();
   const el=document.getElementById('itemList');
