@@ -304,6 +304,14 @@ button { font-family: inherit; cursor: pointer; }
   </div>
 </div>
 
+<!-- 回復資本(週) : RHRアンカー + 睡眠(昼寝込) + BB飲酒補正 -->
+<div class="card">
+  <div class="card-title">🛡 回復資本(週) <span id="recFlag" style="font-size:12px;font-weight:700"></span></div>
+  <div id="recPeriod" style="font-size:11px;color:#8a8a8e;margin-bottom:8px">-</div>
+  <div class="fatigue-grid" id="recRows"></div>
+  <div id="recNote" style="font-size:11px;color:#999;line-height:1.5;margin-top:8px"></div>
+</div>
+
 <!-- 絶好調インジ (§31-A72 主観×客観) -->
 <div class="card">
   <div class="card-title">🌟 絶好調インジ (主観×客観)</div>
@@ -459,7 +467,7 @@ async function reloadAll() {
   if (!pat) { openPatModal(); return; }
   updateStatus('🔄 取得中…', false);
   try {
-    const [gokigen, alcohol, kakeibo, hiitCsv, fmCsv, kenshinCsv, langCsv] = await Promise.all([
+    const [gokigen, alcohol, kakeibo, hiitCsv, fmCsv, kenshinCsv, langCsv, recovery] = await Promise.all([
       fetchJson('data/pwa/gokigen.json').catch(() => null),
       fetchJson('data/pwa/alcohol.json').catch(() => null),
       fetchJson('data/pwa/kakeibo.json').catch(() => null),
@@ -471,7 +479,10 @@ async function reloadAll() {
       fetchCsv('data/health_checkup/kenshin_timeline.csv').catch(() => null),
       // 言語ヘルス: 月次集計CSV
       fetchCsv('data/text/language_health_monthly.csv').catch(() => null),
+      // 回復資本(週): tools/recovery_aggregate.py が生成
+      fetchJson('data/pwa/recovery.json').catch(() => null),
     ]);
+    if (recovery) allData.recovery = recovery;
     if (gokigen) allData.gokigen = gokigen;
     if (alcohol) allData.alcohol = alcohol;
     if (kakeibo) allData.kakeibo = kakeibo;
@@ -689,6 +700,7 @@ function renderAll() {
   renderZekkocho();
   renderHiitRing();
   renderFatigueIndicator();
+  renderRecovery();
   // renderLang(); // 非表示 (ぽっち🌟さん指示 2026-06-10)
   renderKenshin();
   document.getElementById('patStatus').textContent = getPat() ? '⚙️ PAT' : '⚙️ PAT未設定';
@@ -1024,6 +1036,61 @@ function renderFatigueIndicator() {
     setJudge('fatRhr', 'fatRhrDetail', '-', '', 'データ不足');
   }
   // ^o^ / *_* 直近30日 行は絶好調インジと重複のため削除 (ぽっち🌟さん指示)
+}
+
+// ===== 回復資本(週): HRV研究の精神を RHR で代替 =====
+function renderRecovery() {
+  const r = allData.recovery;
+  const rowsEl = document.getElementById('recRows');
+  const flagEl = document.getElementById('recFlag');
+  const perEl = document.getElementById('recPeriod');
+  const noteEl = document.getElementById('recNote');
+  if (!r || !r.window) {
+    rowsEl.innerHTML = ''; flagEl.textContent = ''; noteEl.textContent = '';
+    perEl.textContent = 'データなし(「回復集計して」で生成)';
+    return;
+  }
+  const md = s => { const p = s.split('-'); return `${+p[1]}/${+p[2]}`; };
+  perEl.textContent = `📅 ${md(r.window.start)}〜${md(r.window.end)} / 前週 ${md(r.prev.start)}〜${md(r.prev.end)}比`;
+  const flagColor = { warn:'#FF6B6B', watch:'#FFC107', ok:'#4CAF50', hold:'#999' }[r.flag.level] || '#999';
+  flagEl.textContent = r.flag.text; flagEl.style.color = flagColor;
+
+  // 方向矢印 (good=緑, bad=赤)
+  const GREEN = '#4CAF50', RED = '#FF6B6B';
+  function arrow(d, goodIsDown) {
+    if (d == null) return '';
+    if (Math.abs(d) < 0.05) return ` <span style="color:#999">±0</span>`;
+    const good = goodIsDown ? d < 0 : d > 0;
+    const col = good ? GREEN : RED;
+    const mark = d > 0 ? '▲' : '▼';
+    return ` <span style="color:${col};font-size:12px">${mark}${Math.abs(d).toFixed(1)}</span>`;
+  }
+  function row(label, judge, detail) {
+    return `<div class="fatigue-row"><div class="fat-label">${label}</div>`
+         + `<div class="fat-judge">${judge}</div><div class="fat-detail">${detail}</div></div>`;
+  }
+  let html = '';
+  if (r.rhr && r.rhr.cur) {
+    const c = r.rhr.cur;
+    html += row('❤️ RHR',
+      `${c.mean.toFixed(1)}<small style="font-size:11px;color:#999">bpm</small>${arrow(r.rhr.delta, true)}`,
+      `ブレ±${c.sd.toFixed(1)} / 前週${r.rhr.prev ? r.rhr.prev.mean.toFixed(1) : '-'} (有効${c.n}日)`);
+  }
+  if (r.sleep && r.sleep.cur) {
+    const c = r.sleep.cur;
+    html += row('💤 睡眠(夜+昼寝)',
+      `${c.mean.toFixed(1)}<small style="font-size:11px;color:#999">h</small>${arrow(r.sleep.delta, false)}`,
+      `ブレ±${c.sd.toFixed(1)}h / 前週${r.sleep.prev ? r.sleep.prev.mean.toFixed(1) : '-'} (有効${c.n}日)`);
+  }
+  if (r.bb_adj) {
+    const b = r.bb_adj;
+    const detail = (b.expected != null)
+      ? `同杯基準 ${b.expected} との差 (n${b.n})` : `基準データ不足 (n${b.n})`;
+    html += row('🔋 BB(同杯補正)',
+      `${b.actual}${arrow(b.delta, false)}`, detail);
+  }
+  rowsEl.innerHTML = html;
+  noteEl.textContent = '水準=7日平均 / ブレ=7日SD(週内の乱れ) / 方向=前週比。RHRは下降・睡眠とBBは上昇が良い方向(緑)。BBは飲酒量を勘案した「同杯基準」との差。有効5日未満は判定保留(研究の5晩ルール)。';
 }
 
 // ===== 絶好調インジ (§31-A72: 主観^o^率 × 客観 rate_80 4象限) =====
