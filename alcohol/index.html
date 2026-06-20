@@ -140,11 +140,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-se
 
 <div class="grid" id="mainGrid"></div>
 
+<div class="summary" id="summary"></div>
+
 <div class="summary" id="ma30Section"></div>
 
 <div class="week-chart" id="weekChart"></div>
-
-<div class="summary" id="summary"></div>
 </div>
 
 <div id="listView" style="display:none"></div>
@@ -585,13 +585,14 @@ function renderSummary() {
   const ma3Months = histCups.length;
 
   document.getElementById('summary').innerHTML = `
-    <div class="summary-row main">
+    <div class="summary-row main" onclick="toggleSummaryDetail()" style="cursor:pointer">
       <div>
-        <div class="label">🍺 今月の純アルコール量</div>
+        <div class="label">🍺 今月の純アルコール量 <span id="sumChevron" style="font-size:12px;color:#bbb">▶</span></div>
         <div class="target">目標: ${MONTHLY_TARGET_G}g 以内</div>
       </div>
       <div class="value" style="color:${overTarget?'#FF6B6B':'#FF9800'}">${total}g</div>
     </div>
+    <div id="summaryDetail" style="display:none">
     <div class="summary-row"><span class="emoji">♥️</span><span class="label-text">休肝日 (目標${REST_TARGET}日) ${restClass}</span><span class="count">${restDays}日</span></div>
     <div class="summary-row"><span class="emoji">😊</span><span class="label-text">適量 (1-${TH.moderate}g)</span><span class="count">${modDays}日</span></div>
     <div class="summary-row"><span class="emoji">😞</span><span class="label-text">やや飲み過ぎ (${TH.moderate}-${TH.mild}g)</span><span class="count">${mildDays}日</span></div>
@@ -600,7 +601,24 @@ function renderSummary() {
     <div class="summary-row" style="border-top:1px solid #f0f0f0; padding-top:8px; margin-top:4px;"><span class="emoji">🍶</span><span class="label-text">今月の総杯数<span style="font-size:10px;color:#999;"> ※g÷15換算</span></span><span class="count">${totalCups.toFixed(1)}杯</span></div>
     ${ma3Months >= 2 ? `<div class="summary-row"><span class="emoji">📊</span><span class="label-text">直近${ma3Months}ヶ月 月平均 (杯)</span><span class="count">${ma3Cups.toFixed(1)}杯</span></div>
     <div class="summary-row"><span class="emoji">📊</span><span class="label-text">直近${ma3Months}ヶ月 月平均 (g)</span><span class="count">${ma3G.toFixed(1)}g</span></div>` : ''}
+    </div>
   `;
+  applySummaryDetail();
+}
+
+// 今月の純アルコール量の内訳行を折りたたみ (状態は localStorage に保持)
+let summaryOpen = localStorage.getItem('alc_sumOpen') === '1';
+function applySummaryDetail() {
+  const d = document.getElementById('summaryDetail');
+  if (!d) return;
+  d.style.display = summaryOpen ? 'block' : 'none';
+  const c = document.getElementById('sumChevron');
+  if (c) c.textContent = summaryOpen ? '▼' : '▶';
+}
+function toggleSummaryDetail() {
+  summaryOpen = !summaryOpen;
+  localStorage.setItem('alc_sumOpen', summaryOpen ? '1' : '0');
+  applySummaryDetail();
 }
 
 // 30日移動平均セクション (直近7日の上に独立表示、月換算を先頭に)
