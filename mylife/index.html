@@ -219,9 +219,9 @@ button { font-family: inherit; cursor: pointer; }
 
 <!-- 3軸サマリーは Garmin fetch タイミング都合で日次トラッキングと合わないため非表示 -->
 
-<!-- 🍺 アルコール (純アル/日 + 累計 + 月末着地 統合) -->
+<!-- 🍺 減酒チャレ (純アル/日 + 累計 + 月末着地 統合) -->
 <div class="card">
-  <div class="card-title">🍺 アルコール</div>
+  <div class="card-title">🍺 減酒チャレ</div>
   <div id="alcUnified">-</div>
 </div>
 
@@ -1313,11 +1313,11 @@ function renderAlcUnified() {
   const projG = alcGSum + dailyAvg * remaining;
   const projColor = projG < 750 ? '#4CAF50' : (projG < 1100 ? '#FFC107' : '#FF6B6B');
   el.innerHTML =
-    `<div style="font-size:14px;color:#1d1d1f">`+
-      `1日あたり平均 <b style="font-size:24px">${dailyAvg.toFixed(1)}</b><span style="font-size:12px;color:#999">g</span>`+
-      ` ／ 現時点累計 <b style="font-size:20px">${Math.round(alcGSum)}</b><span style="font-size:12px;color:#999">g</span>`+
+    `<div style="font-size:12px;color:#1d1d1f">`+
+      `1日あたり平均 <b style="font-size:18px">${dailyAvg.toFixed(1)}</b><span style="font-size:11px;color:#999">g</span>`+
+      ` ／ 現時点累計 <b style="font-size:15px">${Math.round(alcGSum)}</b><span style="font-size:11px;color:#999">g</span>`+
     `</div>`+
-    `<div style="font-size:14px;margin-top:8px">月末着地 : <b style="font-size:20px;color:${projColor}">${Math.round(projG)}g</b></div>`;
+    `<div style="font-size:12px;margin-top:6px">月末着地 : <b style="font-size:15px;color:${projColor}">${Math.round(projG)}g</b></div>`;
 }
 
 // ===== 言語ヘルス (§31-A64) =====
