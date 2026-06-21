@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="津久見ギフト">
+<meta name="theme-color" content="#C75B39">
+<link rel="manifest" href="manifest.json">
+<title>津久見ギフト</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif; background:#f5f5f7; color:#1d1d1f; padding-bottom:40px; min-height:100vh; }
+.header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:#fff; border-bottom:1px solid #d2d2d7; position:sticky; top:0; z-index:10; padding-top:max(14px,env(safe-area-inset-top)); }
+.header-title { font-size:18px; font-weight:700; }
+.btns { display:flex; gap:6px; }
+.hbtn { font-size:12px; background:#f0f0f0; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; min-height:36px; }
+.card { background:#fff; margin:8px; padding:14px 16px; border-radius:12px; border:1px solid #e5e5ea; }
+.meta { font-size:12px; color:#6e6e73; line-height:1.6; }
+.big { font-size:26px; font-weight:800; color:#C75B39; }
+.cats { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.cat { font-size:12px; background:#faf2ee; border:1px solid #f0ddd3; border-radius:8px; padding:5px 9px; }
+.cat b { font-size:14px; }
+.row { display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-top:1px solid #f0f0f0; }
+.row:first-child { border-top:none; }
+.rdate { font-size:12px; color:#8a8a8e; min-width:58px; font-weight:600; padding-top:2px; }
+.remoji { font-size:18px; min-width:22px; text-align:center; }
+.ritem { font-size:14px; font-weight:600; }
+.rseller { font-size:11px; color:#999; margin-top:1px; }
+.sectitle { font-weight:700; font-size:14px; margin-bottom:4px; }
+.muted { font-size:11px; color:#999; line-height:1.5; margin-top:10px; }
+.yr { font-size:12px; font-weight:700; color:#C75B39; margin:14px 0 2px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-title">🎁 津久見ギフト</div>
+  <div class="btns">
+    <button class="hbtn" id="reloadBtn" onclick="load(true)" title="再取得">🔄</button>
+    <button class="hbtn" id="syncStatusBtn">⚙️</button>
+  </div>
+</div>
+
+<div class="card" id="summaryCard"><div class="meta" id="summary">読み込み中…</div></div>
+<div class="card" id="listCard"></div>
+
+<script src="sync.js"></script>
+<script>
+const STORAGE_KEY = 'tsukumi_cache';
+// 品目/出品者からカテゴリ判定 (先頭マッチ)
+const CATS = [
+  ['🥩 牛・和牛', /牛|和牛|たん|ローストビーフ|すきやき|しゃぶ/],
+  ['🦀 海鮮',     /かに|カニ|ズワイ|甲羅|うに|ウニ|いくら|海老|エビ|海鮮|マグロ|まぐろ|サーモン|まる浜|PHI/],
+  ['🐟 うなぎ',   /うなぎ|鰻|かわすい/],
+  ['🧴 馬油',     /馬油/],
+  ['📦 その他',   /.*/],
+];
+function catOf(s){ for(const [name,re] of CATS){ if(re.test(s)) return name; } return '📦 その他'; }
+function emojiOf(name){ return name.split(' ')[0]; }
+
+const sync = new GitHubSync({
+  appName:'tsukumi', repoOwner:'ttyf27', repoName:'mylife',
+  filePath:'data/pwa/tsukumi_gifts.json', branch:'claude/garmin-data-analysis-V2xrD',
+  getData: () => ({}), // 表示専用
+});
+sync.attachStatusElement(document.getElementById('syncStatusBtn'));
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+
+function fmtYM(d){ const [y,m]=d.split('-'); return `${+y}/${+m}`; }
+function monthsBetween(a,b){ const [ay,am]=a.split('-').map(Number),[by,bm]=b.split('-').map(Number); return (by-ay)*12+(bm-am)+1; }
+
+function render(data){
+  if(!data || !data.orders){ document.getElementById('summary').textContent='データなし'; return; }
+  const o = data.orders.slice().sort((a,b)=>a.date<b.date?1:-1); // 新しい順
+  const n = o.length;
+  const newest = o[0].date, oldest = o[n-1].date;
+  const span = monthsBetween(oldest, newest);
+  const perMonth = (n/span).toFixed(1);
+  // カテゴリ集計
+  const cc = {};
+  for(const x of o){ const c=catOf((x.item||'')+(x.seller||'')); cc[c]=(cc[c]||0)+1; }
+  const catHtml = CATS.map(([name])=>cc[name]?`<span class="cat">${name} <b>${cc[name]}</b></span>`:'').join('');
+
+  document.getElementById('summary').innerHTML =
+    `<div style="font-size:13px;color:#1d1d1f;font-weight:600;margin-bottom:4px">📮 ${data.recipient||''}</div>`+
+    `<span class="big">${n}</span><span style="font-size:13px;color:#999"> 件</span>`+
+    ` <span style="font-size:12px;color:#6e6e73">(${fmtYM(oldest)}〜${fmtYM(newest)} ・ 約 ${perMonth} 件/月)</span>`+
+    `<div class="cats">${catHtml}</div>`;
+
+  // 年ごとに区切ってリスト
+  let html = '<div class="sectitle">📋 送ったもの(新しい順)</div>';
+  let curYear = '';
+  for(const x of o){
+    const yr = x.date.slice(0,4);
+    if(yr!==curYear){ curYear=yr; html += `<div class="yr">${yr}年</div>`; }
+    const cat = catOf((x.item||'')+(x.seller||''));
+    const sellerLine = (x.seller && x.seller!=='—') ? `<div class="rseller">${x.seller}</div>` : '';
+    html += `<div class="row">
+      <div class="rdate">${fmtYM(x.date)}</div>
+      <div class="remoji">${emojiOf(cat)}</div>
+      <div style="flex:1"><div class="ritem">${x.item||''}</div>${sellerLine}</div>
+    </div>`;
+  }
+  html += `<div class="muted">${data.source||''}<br>更新: ${data.generated_at||'-'}(更新は「津久見リスト更新して」)</div>`;
+  document.getElementById('listCard').innerHTML = html;
+}
+
+async function load(manual){
+  const cached = localStorage.getItem(STORAGE_KEY);
+  if(cached){ try{ render(JSON.parse(cached)); }catch(e){} }
+  const pat = sync.getPat();
+  if(!pat){ if(manual) alert('⚙️でPATを設定してください'); if(!cached) document.getElementById('summary').textContent='⚙️でPATを設定してください'; return; }
+  try{
+    const url=`https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
+    const res=await fetch(url,{cache:'no-store',headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
+    if(!res.ok){ if(manual) alert('取得失敗 ('+res.status+')'); return; }
+    const j=await res.json();
+    const data=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    render(data);
+    if(manual){ const b=document.getElementById('reloadBtn'); b.textContent='✓'; setTimeout(()=>b.textContent='🔄',1000); }
+  }catch(e){ console.warn('load failed',e); if(manual) alert('エラー: '+e.message); }
+}
+load();
+</script>
+</body>
+</html>
