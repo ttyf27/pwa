@@ -67,41 +67,36 @@ if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catc
 function fmtMD(s){ const [,m,d]=s.split('-'); return `${+m}/${+d}`; }
 
 function render(data){
-  if(!data){ document.getElementById('period').textContent='データなし(「今週集計して」でClaudeが生成します)'; return; }
-  const cats = data.cats || Object.keys(data.this.totals);
-  const t = data.this.totals, p = (data.prev&&data.prev.totals)||{};
-  document.getElementById('period').innerHTML =
-    `📅 今週 <b>${fmtMD(data.this.start)}〜${fmtMD(data.this.end)}</b>` +
-    (data.prev?` <span style="color:#bbb">/ 前週 ${fmtMD(data.prev.start)}〜${fmtMD(data.prev.end)}比</span>`:'') +
-    `<br><span style="color:#bbb;font-size:11px">更新: ${data.generated_at||'-'}(更新は「今週集計して」)</span>`;
+  if(!data || !data.cumulative){ document.getElementById('period').textContent='データなし(「集計して」でClaudeが生成します)'; return; }
+  const cats = data.cats || Object.keys(data.cumulative.totals);
+  const cum = data.cumulative, rec = data.recent || {totals:{},daily:{}};
+  const ct = cum.totals||{}, rt = rec.totals||{};
 
-  const nd = data.this.ndays || 7;
-  const tot = c => (t[c]||0);          // 期間トータルh(累計・主数値)
-  const ptot = c => (p[c]||0);
-  const maxh = Math.max(0.1, ...cats.map(c=>tot(c)));
-  document.getElementById('catCard').innerHTML = cats.map(c=>{
-    const cur=tot(c), prev=ptot(c), d=Math.round((cur-prev)*10)/10;
-    const dir=GOOD[c]||'neutral';
-    let cls='neu', arrow='→';
-    if(d>0.05){ arrow='▲'+d.toFixed(1); cls = dir==='up'?'up':(dir==='down'?'down':'neu'); }
-    else if(d<-0.05){ arrow='▼'+Math.abs(d).toFixed(1); cls = dir==='down'?'up':(dir==='up'?'down':'neu'); }
-    else { arrow='±0'; cls='neu'; }
+  document.getElementById('period').innerHTML =
+    `🏆 通算 <b>${fmtMD(cum.since)}〜${fmtMD(cum.through)}</b>` +
+    (rec.start?` <span style="color:#bbb">/ 直近 ${fmtMD(rec.start)}〜${fmtMD(rec.end)}</span>`:'') +
+    `<br><span style="color:#bbb;font-size:11px">更新: ${data.generated_at||'-'}(更新は「集計して」)</span>`;
+
+  const maxh = Math.max(0.1, ...cats.map(c=>ct[c]||0));
+  document.getElementById('catCard').innerHTML = `<div class="sectitle">🏆 通算 積み上げ (h)</div>` + cats.map(c=>{
+    const cur=ct[c]||0, add=rt[c]||0;
     const col=COLOR[c]||'#888';
+    const addtxt = add>0.05 ? `<span class="delta up">+${add.toFixed(1)} 直近</span>` : '';
     return `<div class="catrow">
       <div class="cattop">
         <span class="catname">${c}</span>
-        <span><span class="cathours">${cur.toFixed(1)}</span><small>h</small>${data.prev?`<span class="delta ${cls}">${arrow}</span>`:''}</span>
+        <span><span class="cathours">${cur.toFixed(1)}</span><small>h</small>${addtxt}</span>
       </div>
       <div class="bar-bg"><div class="bar-fill" style="width:${cur/maxh*100}%;background:${col}"></div></div>
     </div>`;
-  }).join('') + `<div class="muted">各行: バー・数値=期間トータルh(${nd}日分の積み上げ)。${data.prev?'▲▼は前週トータル比、緑=良い方向(SNSは減・他は増)。':''} 👿勉強は📖読書と二重計上しない(👿優先で1回)。</div>`;
+  }).join('') + `<div class="muted">数値=${fmtMD(cum.since)}からの通算h(積み上げ・リセットなし)。緑「+X 直近」は直近${rec.ndays||7}日分の上乗せ。👿勉強は📖読書と二重計上しない(👿優先で1回)。</div>`;
 
-  // 日別
-  if(data.this.daily && Object.keys(data.this.daily).length){
-    const days=Object.keys(data.this.daily).sort();
-    let h=`<div class="sectitle">📊 日別 (h)</div><div class="daily"><table><tr><th>日</th>${cats.map(c=>`<th>${c.split(' ')[0]}</th>`).join('')}</tr>`;
+  // 直近の日別
+  if(rec.daily && Object.keys(rec.daily).length){
+    const days=Object.keys(rec.daily).sort();
+    let h=`<div class="sectitle">📊 直近の日別 (h)</div><div class="daily"><table><tr><th>日</th>${cats.map(c=>`<th>${c.split(' ')[0]}</th>`).join('')}</tr>`;
     for(const dd of days){
-      h+=`<tr><td>${fmtMD(dd)}</td>${cats.map(c=>{const v=(data.this.daily[dd][c]||0);return `<td>${v?v.toFixed(1):'·'}</td>`}).join('')}</tr>`;
+      h+=`<tr><td>${fmtMD(dd)}</td>${cats.map(c=>{const v=(rec.daily[dd][c]||0);return `<td>${v?v.toFixed(1):'·'}</td>`}).join('')}</tr>`;
     }
     h+='</table></div>';
     const dc=document.getElementById('dailyCard'); dc.style.display='block'; dc.innerHTML=h;
