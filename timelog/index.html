@@ -93,7 +93,7 @@ function render(data){
 
   // 直近の日別
   if(rec.daily && Object.keys(rec.daily).length){
-    const days=Object.keys(rec.daily).sort();
+    const days=Object.keys(rec.daily).sort().reverse();
     let h=`<div class="sectitle">📊 直近の日別 (h)</div><div class="daily"><table><tr><th>日</th>${cats.map(c=>`<th>${c.split(' ')[0]}</th>`).join('')}</tr>`;
     for(const dd of days){
       h+=`<tr><td>${fmtMD(dd)}</td>${cats.map(c=>{const v=(rec.daily[dd][c]||0);return `<td>${v?v.toFixed(1):'·'}</td>`}).join('')}</tr>`;
