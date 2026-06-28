@@ -101,7 +101,7 @@ function clearDone(){ const n=data.tasks.filter(x=>x.done).length; if(!n) return
 function sortKey(t){ return t.done?2:(t.fav?0:1); }
 
 function render(){
-  const act=data.tasks.filter(t=>!t.done).sort((a,b)=> (sortKey(a)-sortKey(b)) || (a.created-b.created));
+  const act=data.tasks.filter(t=>!t.done).sort((a,b)=> (sortKey(a)-sortKey(b)) || (b.created-a.created));
   const done=data.tasks.filter(t=>t.done).sort((a,b)=> b.created-a.created);
   document.getElementById('sub').textContent = `未完了 ${act.length} ・ 完了 ${done.length}`;
   const el=document.getElementById('list');
