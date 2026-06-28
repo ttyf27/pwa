@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tasks">
+<meta name="theme-color" content="#FF9500">
+<link rel="manifest" href="manifest.json">
+<title>Tasks</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif; background:#e9e9eb; color:#1d1d1f; min-height:100vh; padding-bottom:90px; }
+.head { padding:14px 18px 6px; padding-top:max(14px,env(safe-area-inset-top)); display:flex; align-items:flex-end; justify-content:space-between; }
+.title { font-size:34px; font-weight:800; color:#5b5b60; letter-spacing:-0.5px; }
+.hbtn { font-size:13px; background:#fff; border:1px solid #e0e0e2; border-radius:9px; padding:7px 11px; cursor:pointer; min-height:36px; }
+.sub { font-size:12px; color:#9a9aa0; padding:0 18px 8px; }
+.list { padding:0 12px; }
+.row { display:flex; align-items:center; gap:12px; background:#fff; border-radius:12px; padding:14px 14px; margin-bottom:8px; box-shadow:0 1px 1px rgba(0,0,0,0.04); }
+.ck { width:24px; height:24px; border-radius:50%; border:2px solid #c7c7cc; flex:0 0 auto; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; color:#fff; }
+.ck.done { background:#FF9500; border-color:#FF9500; }
+.txt { flex:1; font-size:16px; line-height:1.35; word-break:break-word; cursor:text; }
+.row.done .txt { color:#b0b0b5; text-decoration:line-through; }
+.star { flex:0 0 auto; font-size:20px; color:#d6d6da; cursor:pointer; width:30px; text-align:center; }
+.star.on { color:#FFC400; }
+.empty { text-align:center; color:#b0b0b5; font-size:14px; padding:40px 0; }
+.donehdr { font-size:12px; color:#9a9aa0; padding:10px 8px 6px; display:flex; justify-content:space-between; align-items:center; }
+.clr { color:#FF6B6B; cursor:pointer; font-size:12px; }
+.addbar { position:fixed; left:0; right:0; bottom:0; background:#f2f2f4; border-top:1px solid #dcdce0; padding:10px 14px; padding-bottom:max(10px,env(safe-area-inset-bottom)); display:flex; align-items:center; gap:10px; }
+.addbar .plus { color:#FF9500; font-size:24px; font-weight:600; }
+#addInput { flex:1; border:none; background:transparent; font-size:16px; outline:none; -webkit-user-select:text; user-select:text; }
+.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#333; color:#fff; font-size:13px; padding:8px 14px; border-radius:18px; opacity:0; transition:opacity .2s; pointer-events:none; }
+.toast.show { opacity:0.95; }
+</style>
+</head>
+<body>
+<div class="head">
+  <div class="title">Tasks</div>
+  <button class="hbtn" id="syncStatus">⚙️</button>
+</div>
+<div class="sub" id="sub"></div>
+<div class="list" id="list"></div>
+
+<div class="addbar">
+  <span class="plus">＋</span>
+  <input id="addInput" type="text" placeholder="Add a Task" enterkeyhint="done" autocomplete="off">
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="sync.js"></script>
+<script>
+'use strict';
+const STORAGE_KEY = 'todo_data_v1';
+
+function loadData(){ try{ const j=JSON.parse(localStorage.getItem(STORAGE_KEY)); if(j&&Array.isArray(j.tasks)) return j; }catch(e){} return {version:1,tasks:[]}; }
+function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+let data = loadData();
+
+function uid(){ return 't'+Math.random().toString(36).slice(2,9)+(data.tasks.length); }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1200); }
+
+const sync = new GitHubSync({
+  appName:'todo', repoOwner:'ttyf27', repoName:'mylife',
+  filePath:'data/pwa/todo.json', branch:'claude/garmin-data-analysis-V2xrD',
+  getData: () => data,
+});
+sync.attachStatusElement(document.getElementById('syncStatus'));
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+
+// 🚨 入力アプリ必須: 起動時に repo から読み戻す (server-wins)。無いと空localStorageが上書きする
+async function initialFetch(){
+  const pat=sync.getPat(); if(!pat) return;
+  try{
+    const url=`https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
+    const res=await fetch(url,{cache:'no-store',headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
+    if(!res.ok) return;
+    const j=await res.json();
+    const remote=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+    if(remote && Array.isArray(remote.tasks)){
+      data=remote; saveData();
+      const m=sync.getMeta(); m.sha=j.sha; m.lastSync=Date.now(); m.dirty=false; sync.setMeta(m); sync.updateStatus();
+      render();
+    }
+  }catch(e){ console.warn('initialFetch failed',e); }
+}
+
+function commit(){ saveData(); render(); sync.markDirtyAndPush(); }
+
+function addTask(text){
+  text=(text||'').trim(); if(!text) return;
+  data.tasks.push({id:uid(),text,done:false,fav:false,created:Date.now()});
+  commit();
+}
+function toggleDone(id){ const t=data.tasks.find(x=>x.id===id); if(t){ t.done=!t.done; commit(); } }
+function toggleFav(id){ const t=data.tasks.find(x=>x.id===id); if(t){ t.fav=!t.fav; commit(); } }
+function editTask(id){ const t=data.tasks.find(x=>x.id===id); if(!t) return; const v=prompt('編集',t.text); if(v!==null){ const nv=v.trim(); if(nv){ t.text=nv; commit(); } } }
+function deleteTask(id){ const t=data.tasks.find(x=>x.id===id); if(!t) return; if(confirm('削除しますか?\n\n'+t.text)){ data.tasks=data.tasks.filter(x=>x.id!==id); commit(); toast('削除しました'); } }
+function clearDone(){ const n=data.tasks.filter(x=>x.done).length; if(!n) return; if(confirm(`完了済み ${n}件を削除しますか?`)){ data.tasks=data.tasks.filter(x=>!x.done); commit(); toast(`${n}件削除`); } }
+
+function sortKey(t){ return t.done?2:(t.fav?0:1); }
+
+function render(){
+  const act=data.tasks.filter(t=>!t.done).sort((a,b)=> (sortKey(a)-sortKey(b)) || (a.created-b.created));
+  const done=data.tasks.filter(t=>t.done).sort((a,b)=> b.created-a.created);
+  document.getElementById('sub').textContent = `未完了 ${act.length} ・ 完了 ${done.length}`;
+  const el=document.getElementById('list');
+  let h='';
+  if(!act.length && !done.length){ h='<div class="empty">タスクなし。下の「Add a Task」から追加</div>'; }
+  h += act.map(rowHtml).join('');
+  if(done.length){
+    h += `<div class="donehdr"><span>完了 ${done.length}</span><span class="clr" onclick="clearDone()">まとめて削除</span></div>`;
+    h += done.map(rowHtml).join('');
+  }
+  el.innerHTML=h;
+  bindRows();
+}
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function rowHtml(t){
+  return `<div class="row ${t.done?'done':''}" data-id="${t.id}">
+    <div class="ck ${t.done?'done':''}" data-act="done">${t.done?'✓':''}</div>
+    <div class="txt" data-act="edit">${esc(t.text)}</div>
+    <div class="star ${t.fav?'on':''}" data-act="fav">${t.fav?'★':'☆'}</div>
+  </div>`;
+}
+
+// イベント: タップ=各アクション / テキスト長押し=削除
+let pressTimer=null, longFired=false;
+function bindRows(){
+  document.querySelectorAll('.row').forEach(row=>{
+    const id=row.dataset.id;
+    row.querySelector('[data-act="done"]').onclick=e=>{ e.stopPropagation(); toggleDone(id); };
+    row.querySelector('[data-act="fav"]').onclick=e=>{ e.stopPropagation(); toggleFav(id); };
+    const txt=row.querySelector('[data-act="edit"]');
+    txt.onclick=e=>{ if(longFired){ longFired=false; return; } editTask(id); };
+    const start=()=>{ longFired=false; pressTimer=setTimeout(()=>{ longFired=true; deleteTask(id); },550); };
+    const cancel=()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } };
+    txt.addEventListener('touchstart',start,{passive:true});
+    txt.addEventListener('touchend',cancel); txt.addEventListener('touchmove',cancel);
+    txt.addEventListener('mousedown',start); txt.addEventListener('mouseup',cancel); txt.addEventListener('mouseleave',cancel);
+  });
+}
+
+const inp=document.getElementById('addInput');
+inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ addTask(inp.value); inp.value=''; } });
+inp.addEventListener('blur',()=>{ if(inp.value.trim()){ addTask(inp.value); inp.value=''; } });
+
+render();
+initialFetch();
+</script>
+</body>
+</html>
