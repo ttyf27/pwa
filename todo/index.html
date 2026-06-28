@@ -26,6 +26,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
 .star.on { color:#FFC400; }
 .empty { text-align:center; color:#b0b0b5; font-size:14px; padding:40px 0; }
 .donehdr { font-size:12px; color:#9a9aa0; padding:10px 8px 6px; display:flex; justify-content:space-between; align-items:center; }
+.dtoggle { cursor:pointer; font-weight:600; }
 .clr { color:#FF6B6B; cursor:pointer; font-size:12px; }
 .addbar { position:fixed; left:0; right:0; bottom:0; background:#f2f2f4; border-top:1px solid #dcdce0; padding:10px 14px; padding-bottom:max(10px,env(safe-area-inset-bottom)); display:flex; align-items:center; gap:10px; }
 .addbar .plus { color:#FF9500; font-size:24px; font-weight:600; }
@@ -99,6 +100,8 @@ function deleteTask(id){ const t=data.tasks.find(x=>x.id===id); if(!t) return; i
 function clearDone(){ const n=data.tasks.filter(x=>x.done).length; if(!n) return; if(confirm(`完了済み ${n}件を削除しますか?`)){ data.tasks=data.tasks.filter(x=>!x.done); commit(); toast(`${n}件削除`); } }
 
 function sortKey(t){ return t.done?2:(t.fav?0:1); }
+function getDoneCollapsed(){ return localStorage.getItem('todo_done_collapsed')!=='false'; } // 既定=畳む
+function toggleDoneCollapse(){ localStorage.setItem('todo_done_collapsed', getDoneCollapsed()?'false':'true'); render(); }
 
 function render(){
   const act=data.tasks.filter(t=>!t.done).sort((a,b)=> (sortKey(a)-sortKey(b)) || (b.created-a.created));
@@ -109,8 +112,9 @@ function render(){
   if(!act.length && !done.length){ h='<div class="empty">タスクなし。下の「Add a Task」から追加</div>'; }
   h += act.map(rowHtml).join('');
   if(done.length){
-    h += `<div class="donehdr"><span>完了 ${done.length}</span><span class="clr" onclick="clearDone()">まとめて削除</span></div>`;
-    h += done.map(rowHtml).join('');
+    const collapsed=getDoneCollapsed();
+    h += `<div class="donehdr"><span class="dtoggle" onclick="toggleDoneCollapse()">${collapsed?'▶':'▼'} 完了 ${done.length}</span><span class="clr" onclick="clearDone()">まとめて削除</span></div>`;
+    if(!collapsed) h += done.map(rowHtml).join('');
   }
   el.innerHTML=h;
   bindRows();
