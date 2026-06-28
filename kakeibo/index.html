@@ -628,7 +628,7 @@ function renderCal() {
     const isToday = dateStr === today;
     const dow = new Date(y, m-1, d).getDay();
     const dayBudget = (dow === 0 || dow === 6) ? WE_TGT : WD_TGT;
-    const heart = (exp > 0 && exp <= dayBudget) ? `<div class="cheart">♥️</div>` : '';
+    const heart = (exp > 0 && exp <= dayBudget) ? `<div class="cheart">👛</div>` : '';
     let body = exp > 0 ? `${heart}<div class="cexp">${fmtShortYen(exp)}</div>` : `<div class="cdash">-</div>`;
     if (inc > 0) body += `<div class="cinc">+${fmtShortYen(inc)}</div>`;
     html += `<div class="cal-cell ${isToday ? 'today' : ''}" onclick="onCalCellClick('${dateStr}')"><div class="cdate">${d}</div>${body}</div>`;
