@@ -65,6 +65,7 @@ sync.attachStatusElement(document.getElementById('syncStatusBtn'));
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
 function fmtMD(s){ const [,m,d]=s.split('-'); return `${+m}/${+d}`; }
+function fmtMDW(s){ const [y,m,d]=s.split('-').map(Number); const w=['日','月','火','水','木','金','土'][new Date(y,m-1,d).getDay()]; return `${m}/${d}(${w})`; }
 
 function render(data){
   if(!data || !data.cumulative){ document.getElementById('period').textContent='データなし(「集計して」でClaudeが生成します)'; return; }
@@ -96,7 +97,7 @@ function render(data){
     const days=Object.keys(rec.daily).sort().reverse();
     let h=`<div class="sectitle">📊 直近の日別 (h)</div><div class="daily"><table><tr><th>日</th>${cats.map(c=>`<th>${c.split(' ')[0]}</th>`).join('')}</tr>`;
     for(const dd of days){
-      h+=`<tr><td>${fmtMD(dd)}</td>${cats.map(c=>{const v=(rec.daily[dd][c]||0);return `<td>${v?v.toFixed(1):'·'}</td>`}).join('')}</tr>`;
+      h+=`<tr><td>${fmtMDW(dd)}</td>${cats.map(c=>{const v=(rec.daily[dd][c]||0);return `<td>${v?v.toFixed(1):'·'}</td>`}).join('')}</tr>`;
     }
     h+='</table></div>';
     const dc=document.getElementById('dailyCard'); dc.style.display='block'; dc.innerHTML=h;
