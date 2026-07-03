@@ -1023,14 +1023,15 @@ function renderRecovery() {
   const flagColor = { warn:'#FF6B6B', watch:'#FFC107', ok:'#4CAF50', hold:'#999' }[r.flag.level] || '#999';
   flagEl.textContent = r.flag.text; flagEl.style.color = flagColor;
 
-  // 方向矢印 (good=緑, bad=赤)
-  const GREEN = '#4CAF50', RED = '#FF6B6B';
+  // 方向矢印: 向き=事実の増減、色=良し悪し×向きで1対1 (▲緑=上がって良い / ▼青=下がって良い / ▲橙=上がって悪い / ▼赤=下がって悪い)
+  const GREEN = '#4CAF50', RED = '#FF6B6B', BLUE = '#2196F3', ORANGE = '#FFA726';
   function arrow(d, goodIsDown) {
     if (d == null) return '';
     if (Math.abs(d) < 0.05) return ` <span style="color:#999">±0</span>`;
     const good = goodIsDown ? d < 0 : d > 0;
-    const col = good ? GREEN : RED;
-    const mark = d > 0 ? '▲' : '▼';
+    const up = d > 0;
+    const col = good ? (up ? GREEN : BLUE) : (up ? ORANGE : RED);
+    const mark = up ? '▲' : '▼';
     return ` <span style="color:${col};font-size:12px">${mark}${Math.abs(d).toFixed(1)}</span>`;
   }
   function row(label, judge, detail) {
@@ -1058,7 +1059,7 @@ function renderRecovery() {
       `${b.actual}${arrow(b.delta, false)}`, detail);
   }
   rowsEl.innerHTML = html;
-  noteEl.textContent = '水準=7日平均 / ブレ=7日SD(週内の乱れ) / 方向=前週比。RHRは下降・睡眠とBBは上昇が良い方向(緑)。BBは飲酒量を勘案した「同杯基準」との差。有効5日未満は判定保留(研究の5晩ルール)。';
+  noteEl.textContent = '水準=7日平均 / ブレ=7日SD(週内の乱れ) / 方向=前週比。▼青=下がって良い(RHR)・▲緑=上がって良い(睡眠/BB)、悪化は▲橙(RHR上昇)・▼赤(睡眠/BB低下)。BBは飲酒量を勘案した「同杯基準」との差。有効5日未満は判定保留(研究の5晩ルール)。';
 }
 
 // ===== 絶好調インジ (§31-A72: 主観^o^率 × 客観 rate_80 4象限) =====

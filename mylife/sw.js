@@ -1,4 +1,4 @@
-const CACHE = 'mylife-v49';
+const CACHE = 'mylife-v50';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
