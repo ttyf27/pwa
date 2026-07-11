@@ -511,6 +511,9 @@ function refreshRanking() {
   loadAndRenderRanking();
 }
 
+// 「行ってない店」ランキングから恒久除外する店 (デリ/カフェ等、再訪レコメンド対象外)
+const RANK_EXCLUDE = new Set(['ディーンアンドデルーカ']);
+
 function renderRankingFromData(storeData) {
   // 新PWAデータ (state.entries 食費) をマージして店別最新化
   const stores = {};
@@ -533,7 +536,7 @@ function renderRankingFromData(storeData) {
   });
 
   const today = new Date();
-  const list = Object.values(stores).map(s => {
+  const list = Object.values(stores).filter(s => !RANK_EXCLUDE.has((s.name||'').trim())).map(s => {
     const last = new Date(s.last);
     const first = new Date(s.first);
     const daysSince = Math.floor((today - last) / 86400000);
