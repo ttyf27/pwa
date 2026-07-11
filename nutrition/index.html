@@ -254,16 +254,14 @@ function renderHist(){
     const ms=metabScore(state.days[d]||[]);
     const msBadge = ms?`<span style="font-size:13px;font-weight:800;color:${scoreColor(ms.total)}">🔋${r1(ms.total)}</span><span style="font-size:9px;color:#bbb">/10</span>`:'';
     html+=`<div onclick="jumpToDay('${d}')" style="padding:10px 0;border-top:1px solid #f0f0f0;cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <span style="font-weight:600">${m}/${da}（${wk}） ${msBadge}</span>
-        <span style="text-align:right">
-          <b style="color:${pc};font-size:15px">P ${r1(t.p)}</b><span style="font-size:11px;color:#999">/${TARGET.p}g</span>
-          &nbsp;&nbsp;<b style="color:${kc};font-size:15px">${Math.round(t.kcal)}</b><span style="font-size:10px;color:#999">kcal</span>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <span style="font-weight:600;white-space:nowrap">${m}/${da}（${wk}） ${msBadge}</span>
+        <span style="text-align:right;white-space:nowrap">
+          <b style="color:${pc};font-size:15px">P ${r1(t.p)}</b><span style="font-size:10px;color:#999">/${TARGET.p}</span>
+          <span style="color:#ccc"> · </span><span style="color:${fc};font-size:13px">F ${r1(t.f)}</span>
+          <span style="color:#ccc"> · </span><span style="color:#6e6e73;font-size:13px">C ${r1(t.c)}</span>
+          <span style="color:#ccc"> · </span><b style="color:${kc};font-size:15px">${Math.round(t.kcal)}</b><span style="font-size:10px;color:#999">kcal</span>
         </span>
-      </div>
-      <div style="font-size:12px;margin-top:3px;text-align:right">
-        <span style="color:${fc}">F ${r1(t.f)}</span> ・
-        <span style="color:#6e6e73">C ${r1(t.c)}</span> <span style="color:#bbb">g</span>
       </div>
     </div>`;
   }
