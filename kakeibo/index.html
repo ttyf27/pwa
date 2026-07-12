@@ -512,7 +512,7 @@ function refreshRanking() {
 }
 
 // 「行ってない店」ランキングから恒久除外する店 (デリ/カフェ等、再訪レコメンド対象外)
-const RANK_EXCLUDE = new Set(['ディーンアンドデルーカ']);
+const RANK_EXCLUDE = new Set(['ディーンアンドデルーカ', 'マクドナルド', '町田商店']);
 
 function renderRankingFromData(storeData) {
   // 新PWAデータ (state.entries 食費) をマージして店別最新化
