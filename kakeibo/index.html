@@ -423,6 +423,8 @@ function setView(name) {
 }
 
 // ========= 週末レストラン (直近3ヶ月・土日・食費≥¥2,000・新しい順) =========
+// 週末外食リストから名前で除外する店 (高額でもレストラン扱いしないコンビニ等)
+const WEEKEND_EXCLUDE = new Set(['セブンイレブン']);
 function renderWeekend() {
   const TH = 3000; // レストラン目安(コンビニ/カフェ/軽食を除外)
   const cut = new Date(); cut.setMonth(cut.getMonth() - 3);
@@ -435,6 +437,7 @@ function renderWeekend() {
     const [y,m,d] = e.date.split('-').map(Number);
     const wd = new Date(y, m-1, d).getDay();
     if (wd !== 0 && wd !== 6) return false;
+    if (WEEKEND_EXCLUDE.has((e.name || '').trim())) return false;
     return (e.amount || 0) >= TH;
   }).sort((a,b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
 
@@ -512,7 +515,7 @@ function refreshRanking() {
 }
 
 // 「行ってない店」ランキングから恒久除外する店 (デリ/カフェ等、再訪レコメンド対象外)
-const RANK_EXCLUDE = new Set(['ディーンアンドデルーカ', 'マクドナルド', '町田商店', 'セブンイレブン']);
+const RANK_EXCLUDE = new Set(['ディーンアンドデルーカ', 'マクドナルド', '町田商店']);
 
 function renderRankingFromData(storeData) {
   // 新PWAデータ (state.entries 食費) をマージして店別最新化
