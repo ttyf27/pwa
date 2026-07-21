@@ -346,7 +346,7 @@ const REST_TARGET = 10;
 let currentDate = new Date();
 let editingDate = null;
 let editingState = null; // { status, condition, drinkCounts: {preset_id: count} }
-let activeCategory = 'beer';
+let activeCategory = 'highball';
 
 // state: { data: {date: dayEntry}, customPresets: {id: preset} }
 function loadState() {
@@ -706,7 +706,7 @@ function openModal(dateStr) {
     condition: entry.condition || 'normal',
     drinks: { ...(entry.drinks || {}) },
   };
-  activeCategory = 'beer';
+  activeCategory = 'highball';
 
   const [y, mo, d] = dateStr.split('-');
   document.getElementById('modalDate').textContent = `📅 ${y}年${parseInt(mo)}月${parseInt(d)}日`;
