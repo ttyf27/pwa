@@ -425,6 +425,8 @@ function setView(name) {
 // ========= 週末レストラン (直近3ヶ月・土日・食費≥¥2,000・新しい順) =========
 // 週末外食リストから名前で除外する店 (高額でもレストラン扱いしないコンビニ等)
 const WEEKEND_EXCLUDE = new Set(['セブンイレブン']);
+// 三連休の祝日など、平日だが週末外食として扱いたい日 (YYYY-MM-DD)
+const WEEKEND_EXTRA = new Set(['2026-07-20']); // 海の日(月)・三連休
 function renderWeekend() {
   const TH = 3000; // レストラン目安(コンビニ/カフェ/軽食を除外)
   const cut = new Date(); cut.setMonth(cut.getMonth() - 3);
@@ -436,7 +438,7 @@ function renderWeekend() {
     if (!e.date || e.date < cutStr) return false;
     const [y,m,d] = e.date.split('-').map(Number);
     const wd = new Date(y, m-1, d).getDay();
-    if (wd !== 0 && wd !== 6) return false;
+    if (wd !== 0 && wd !== 6 && !WEEKEND_EXTRA.has(e.date)) return false;
     if (WEEKEND_EXCLUDE.has((e.name || '').trim())) return false;
     return (e.amount || 0) >= TH;
   }).sort((a,b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
