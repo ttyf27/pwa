@@ -426,7 +426,7 @@ function setView(name) {
 // 週末外食リストから名前で除外する店 (高額でもレストラン扱いしないコンビニ等)
 const WEEKEND_EXCLUDE = new Set(['セブンイレブン']);
 // 三連休の祝日など、平日だが週末外食として扱いたい日 (YYYY-MM-DD)
-const WEEKEND_EXTRA = new Set(['2026-07-20']); // 海の日(月)・三連休
+const WEEKEND_EXTRA = new Set(['2026-07-20','2026-07-31']); // 海の日(月)・三連休 / 7-31(金)どんく
 function renderWeekend() {
   const TH = 3000; // レストラン目安(コンビニ/カフェ/軽食を除外)
   const cut = new Date(); cut.setMonth(cut.getMonth() - 3);
