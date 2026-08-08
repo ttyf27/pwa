@@ -50,7 +50,7 @@ button { font-family:inherit; }
 .col .cell:first-child { border-top:none; }
 .evlayer { position:absolute; inset:0; pointer-events:none; }
 .ev { position:absolute; border-radius:5px; padding:2px 5px; font-size:11px; line-height:1.25; color:#fff; overflow:hidden; pointer-events:auto; cursor:pointer; box-shadow:0 0 0 1px rgba(255,255,255,.6); }
-.ev .et { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ev .et { font-weight:600; overflow:hidden; word-break:break-word; }
 .ev .es { font-size:10px; opacity:.9; }
 .nowline { position:absolute; left:0; right:0; height:2px; background:#EA4335; z-index:5; pointer-events:none; }
 .nowline::before { content:''; position:absolute; left:-4px; top:-3px; width:8px; height:8px; border-radius:50%; background:#EA4335; }
@@ -126,7 +126,9 @@ button { font-family:inherit; }
 <script>
 const STORAGE_KEY = 'calendar_data';
 const HOUR_H = 48;                 // 1時間の高さ(px)
-const COLORS = { blue:'#4285F4', red:'#EA4335', green:'#0B8043', orange:'#F4511E', purple:'#8E24AA', teal:'#00897B', gray:'#616161' };
+const COLORS = { lavender:'#7986CB', blue:'#4285F4', red:'#EA4335', green:'#0B8043', orange:'#F4511E', purple:'#8E24AA', teal:'#00897B', gray:'#616161' };
+const DEFAULT_COLOR = 'lavender';           // 実カレンダーに合わせ既定=ラベンダー
+const WEEK_START = 6;                        // 週の始まり 0=日..6=土 (実カレンダー=土曜始まり)
 const WD = ['日','月','火','水','木','金','土'];
 
 let view = localStorage.getItem('cal_view') || 'week';
@@ -152,7 +154,8 @@ function sameDay(a,b){ return ymd(a)===ymd(b); }
 
 function viewDays(){
   if(view==='3day') return [0,1,2].map(i=>addDays(anchor,i));
-  const start=addDays(anchor,-anchor.getDay());   // 週=日曜始まり
+  const off=(7 + anchor.getDay() - WEEK_START) % 7;
+  const start=addDays(anchor, -off);   // 週=WEEK_START始まり
   return [0,1,2,3,4,5,6].map(i=>addDays(start,i));
 }
 
@@ -240,7 +243,7 @@ function placeEvents(d, di){
 function drawEv(layer, it, ncol){
   const top=it.s/60*HOUR_H, h=Math.max((it.e2-it.s)/60*HOUR_H, 16);
   const w=100/ncol, left=it.col*w;
-  const c=COLORS[it.color]||COLORS.blue;
+  const c=COLORS[it.color]||COLORS[DEFAULT_COLOR];
   const el=document.createElement('div');
   el.className='ev'; el.style.top=top+'px'; el.style.height=(h-1)+'px';
   el.style.left=`calc(${left}% + 1px)`; el.style.width=`calc(${w}% - 2px)`; el.style.background=c;
@@ -264,11 +267,11 @@ function renderSwatches(sel){
   document.getElementById('m_sw').innerHTML = Object.keys(COLORS).map(k=>
     `<div class="sw ${k===sel?'on':''}" data-c="${k}" style="background:${COLORS[k]}" onclick="pickColor('${k}')"></div>`).join('');
 }
-let curColor='blue';
+let curColor=DEFAULT_COLOR;
 function pickColor(k){ curColor=k; renderSwatches(k); }
 
 function openNew(d, hour){
-  editId=null; curColor='blue';
+  editId=null; curColor=DEFAULT_COLOR;
   document.getElementById('mTitle').textContent='新しい予定';
   document.getElementById('m_del').style.display='none';
   document.getElementById('m_title').value='';
@@ -276,7 +279,7 @@ function openNew(d, hour){
   document.getElementById('m_start').value=`${String(hour).padStart(2,'0')}:00`;
   document.getElementById('m_end').value=`${String(Math.min(hour+1,23)).padStart(2,'0')}:00`;
   document.getElementById('m_note').value='';
-  renderSwatches('blue');
+  renderSwatches(DEFAULT_COLOR);
   document.getElementById('ov').classList.add('open');
   setTimeout(()=>document.getElementById('m_title').focus(),50);
 }
