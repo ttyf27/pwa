@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="calendar">
+<meta name="theme-color" content="#4285F4">
+<link rel="manifest" href="manifest.json">
+<title>calendar</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif; background:#fff; color:#1d1d1f; height:100vh; display:flex; flex-direction:column; -webkit-text-size-adjust:100%; overflow:hidden; }
+button { font-family:inherit; }
+
+/* ===== ヘッダ ===== */
+.top { display:flex; align-items:center; gap:8px; padding:10px 12px; padding-top:max(10px,env(safe-area-inset-top)); border-bottom:1px solid #e5e5ea; background:#fff; }
+.top .title { font-size:17px; font-weight:700; }
+.top .range { font-size:13px; color:#6e6e73; flex:1; }
+.seg { display:flex; background:#f0f0f0; border-radius:8px; overflow:hidden; }
+.seg button { padding:6px 12px; font-size:13px; border:none; background:transparent; color:#6e6e73; cursor:pointer; font-weight:600; }
+.seg button.on { background:#fff; color:#4285F4; box-shadow:0 1px 2px rgba(0,0,0,.15); border-radius:7px; }
+.navbtns { display:flex; align-items:center; gap:4px; }
+.navbtns button { width:32px; height:32px; border:none; background:#f0f0f0; border-radius:8px; font-size:15px; cursor:pointer; color:#1d1d1f; }
+.navbtns .today { width:auto; padding:0 10px; font-size:12px; font-weight:600; }
+.sync { border:none; background:transparent; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap; padding:4px 2px; flex-shrink:0; }
+
+/* ===== 曜日ヘッダ ===== */
+.dayhead { display:flex; border-bottom:1px solid #e5e5ea; background:#fff; }
+.dayhead .gutter { width:46px; flex-shrink:0; }
+.dayhead .dh { flex:1; text-align:center; padding:6px 2px 8px; border-left:1px solid #f0f0f0; }
+.dayhead .dh .wd { font-size:11px; color:#6e6e73; }
+.dayhead .dh .dnum { font-size:18px; font-weight:600; margin-top:2px; width:32px; height:32px; line-height:32px; border-radius:50%; display:inline-block; }
+.dayhead .dh.today .wd { color:#4285F4; }
+.dayhead .dh.today .dnum { background:#4285F4; color:#fff; }
+.dayhead .dh.sun .wd, .dayhead .dh.sun .dnum { color:#EA4335; }
+.dayhead .dh.sat .wd, .dayhead .dh.sat .dnum { color:#4285F4; }
+.dayhead .dh.today.sun .dnum, .dayhead .dh.today.sat .dnum { color:#fff; }
+
+/* ===== 時間グリッド ===== */
+.scroll { flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
+.grid { display:flex; position:relative; }
+.gutter { width:46px; flex-shrink:0; position:relative; }
+.gutter .hr { height:48px; position:relative; }
+.gutter .hr span { position:absolute; top:-7px; right:6px; font-size:10px; color:#9a9a9f; }
+.cols { flex:1; display:flex; position:relative; }
+.col { flex:1; position:relative; border-left:1px solid #f0f0f0; }
+.col .cell { height:48px; border-top:1px solid #f0f0f0; }
+.col .cell:first-child { border-top:none; }
+.evlayer { position:absolute; inset:0; pointer-events:none; }
+.ev { position:absolute; border-radius:5px; padding:2px 5px; font-size:11px; line-height:1.25; color:#fff; overflow:hidden; pointer-events:auto; cursor:pointer; box-shadow:0 0 0 1px rgba(255,255,255,.6); }
+.ev .et { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ev .es { font-size:10px; opacity:.9; }
+.nowline { position:absolute; left:0; right:0; height:2px; background:#EA4335; z-index:5; pointer-events:none; }
+.nowline::before { content:''; position:absolute; left:-4px; top:-3px; width:8px; height:8px; border-radius:50%; background:#EA4335; }
+
+/* ===== モーダル ===== */
+.ov { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:100; padding:18px; }
+.ov.open { display:flex; }
+.sheet { background:#fff; border-radius:16px; width:100%; max-width:400px; max-height:90vh; overflow-y:auto; padding:18px; }
+.sheet h3 { font-size:16px; font-weight:700; text-align:center; margin-bottom:14px; }
+.fld { margin-bottom:12px; }
+.fld label { display:block; font-size:12px; color:#6e6e73; margin-bottom:4px; }
+.fld input, .fld textarea { width:100%; border:1px solid #d2d2d7; border-radius:8px; font-size:15px; font-family:inherit; padding:9px 10px; outline:none; background:#fff; color:#1d1d1f; }
+.fld textarea { resize:vertical; min-height:56px; }
+.trow { display:flex; gap:10px; }
+.trow .fld { flex:1; }
+.swatches { display:flex; gap:10px; flex-wrap:wrap; }
+.sw { width:30px; height:30px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
+.sw.on { border-color:#1d1d1f; }
+.acts { display:flex; gap:10px; margin-top:6px; }
+.acts button { flex:1; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; }
+.btn-save { background:#4285F4; color:#fff; }
+.btn-del { background:#fff; color:#EA4335; border:1px solid #f0d0cd !important; }
+.btn-cancel { background:#f0f0f0; color:#1d1d1f; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="title">📅</div>
+  <div class="range" id="range">—</div>
+  <div class="seg">
+    <button id="segWeek" class="on" onclick="setView('week')">週</button>
+    <button id="seg3" onclick="setView('3day')">3日</button>
+  </div>
+  <div class="navbtns">
+    <button onclick="nav(-1)">‹</button>
+    <button class="today" onclick="goToday()">今日</button>
+    <button onclick="nav(1)">›</button>
+  </div>
+  <button class="sync" id="syncStatus">☁️</button>
+</div>
+
+<div class="dayhead" id="dayhead"></div>
+
+<div class="scroll" id="scroll">
+  <div class="grid">
+    <div class="gutter" id="gutter"></div>
+    <div class="cols" id="cols"></div>
+  </div>
+</div>
+
+<!-- 予定 追加/編集 -->
+<div class="ov" id="ov">
+  <div class="sheet">
+    <h3 id="mTitle">予定</h3>
+    <div class="fld"><label>タイトル</label><input id="m_title" type="text" placeholder="予定名" autocomplete="off"></div>
+    <div class="fld"><label>日付</label><input id="m_date" type="date"></div>
+    <div class="trow">
+      <div class="fld"><label>開始</label><input id="m_start" type="time" step="300"></div>
+      <div class="fld"><label>終了</label><input id="m_end" type="time" step="300"></div>
+    </div>
+    <div class="fld"><label>色</label><div class="swatches" id="m_sw"></div></div>
+    <div class="fld"><label>メモ</label><textarea id="m_note" placeholder="任意"></textarea></div>
+    <div class="acts">
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-del" id="m_del" onclick="delEvent()" style="display:none">削除</button>
+      <button class="btn-save" onclick="saveEvent()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="sync.js"></script>
+<script>
+const STORAGE_KEY = 'calendar_data';
+const HOUR_H = 48;                 // 1時間の高さ(px)
+const COLORS = { blue:'#4285F4', red:'#EA4335', green:'#0B8043', orange:'#F4511E', purple:'#8E24AA', teal:'#00897B', gray:'#616161' };
+const WD = ['日','月','火','水','木','金','土'];
+
+let view = localStorage.getItem('cal_view') || 'week';
+if(view!=='week' && view!=='3day') view='week';
+let anchor = new Date(); anchor.setHours(0,0,0,0);
+let editId = null;
+
+function loadData(){
+  try{ const s=JSON.parse(localStorage.getItem(STORAGE_KEY)); if(s&&Array.isArray(s.events)) return s; }catch(e){}
+  return { events:[] };
+}
+let data = loadData();
+function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function commit(){ saveData(); render(); sync.markDirtyAndPush(); }
+function uid(){ return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+// ===== 日付ユーティリティ =====
+function ymd(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); x.setHours(0,0,0,0); return x; }
+function parseMin(t){ if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+(m||0); }
+function fmtMin(m){ const h=Math.floor(m/60), mm=m%60; return `${h}:${String(mm).padStart(2,'0')}`; }
+function sameDay(a,b){ return ymd(a)===ymd(b); }
+
+function viewDays(){
+  if(view==='3day') return [0,1,2].map(i=>addDays(anchor,i));
+  const start=addDays(anchor,-anchor.getDay());   // 週=日曜始まり
+  return [0,1,2,3,4,5,6].map(i=>addDays(start,i));
+}
+
+// ===== 描画 =====
+const sync = new GitHubSync({
+  appName:'calendar', repoOwner:'ttyf27', repoName:'mylife',
+  filePath:'data/pwa/calendar.json', branch:'claude/garmin-data-analysis-V2xrD',
+  getData: () => data,
+});
+sync.attachStatusElement(document.getElementById('syncStatus'));
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+
+function setView(v){ view=v; localStorage.setItem('cal_view',v);
+  document.getElementById('segWeek').classList.toggle('on',v==='week');
+  document.getElementById('seg3').classList.toggle('on',v==='3day');
+  render();
+}
+function nav(dir){ anchor=addDays(anchor, dir*(view==='3day'?3:7)); render(); }
+function goToday(){ anchor=new Date(); anchor.setHours(0,0,0,0); render(); scrollToHour(new Date().getHours()); }
+
+function render(){
+  const days=viewDays();
+  // 期間ラベル
+  const a=days[0], b=days[days.length-1];
+  const rl = a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth()
+    ? `${a.getFullYear()}年${a.getMonth()+1}月 ${a.getDate()}–${b.getDate()}日`
+    : `${a.getFullYear()}/${a.getMonth()+1}/${a.getDate()} – ${b.getMonth()+1}/${b.getDate()}`;
+  document.getElementById('range').textContent = rl;
+
+  // 曜日ヘッダ
+  const today=new Date();
+  document.getElementById('dayhead').innerHTML =
+    '<div class="gutter"></div>' + days.map(d=>{
+      const cls=[ d.getDay()===0?'sun':'', d.getDay()===6?'sat':'', sameDay(d,today)?'today':'' ].join(' ');
+      return `<div class="dh ${cls}"><div class="wd">${WD[d.getDay()]}</div><div class="dnum">${d.getDate()}</div></div>`;
+    }).join('');
+
+  // 時間ガター
+  let g=''; for(let h=0;h<24;h++){ g+=`<div class="hr"><span>${h?h+':00':''}</span></div>`; }
+  document.getElementById('gutter').innerHTML=g;
+
+  // 各日カラム
+  document.getElementById('cols').innerHTML = days.map((d,di)=>{
+    let cells=''; for(let h=0;h<24;h++){ cells+=`<div class="cell" data-di="${di}" data-h="${h}"></div>`; }
+    return `<div class="col" data-di="${di}"><div class="evlayer" id="evl${di}"></div>${cells}</div>`;
+  }).join('');
+
+  // 予定配置
+  days.forEach((d,di)=> placeEvents(d,di));
+
+  // now-line (当日のみ)
+  const nd = days.findIndex(d=>sameDay(d,today));
+  if(nd>=0){ const nm=today.getHours()*60+today.getMinutes();
+    const line=document.createElement('div'); line.className='nowline';
+    line.style.top=(nm/60*HOUR_H)+'px';
+    document.getElementById('evl'+nd).appendChild(line);
+  }
+
+  bindCells();
+}
+
+// 重なりレイアウト: クラスタ内で列割当 → 幅=1/列数
+function placeEvents(d, di){
+  const key=ymd(d);
+  const evs=data.events.filter(e=>e.date===key)
+    .map(e=>({...e, s:parseMin(e.start), e2:parseMin(e.end||e.start)}))
+    .map(e=>({...e, e2: e.e2>e.s ? e.e2 : e.s+30 }))
+    .sort((x,y)=> x.s-y.s || x.e2-y.e2);
+  // クラスタ分割
+  const layer=document.getElementById('evl'+di);
+  let cluster=[], cEnd=-1;
+  const flush=()=>{
+    const colsEnd=[];
+    cluster.forEach(it=>{ let placed=false;
+      for(let i=0;i<colsEnd.length;i++){ if(it.s>=colsEnd[i]){ it.col=i; colsEnd[i]=it.e2; placed=true; break; } }
+      if(!placed){ it.col=colsEnd.length; colsEnd.push(it.e2); }
+    });
+    const n=colsEnd.length;
+    cluster.forEach(it=> drawEv(layer,it,n));
+    cluster=[];
+  };
+  evs.forEach(it=>{ if(cluster.length && it.s>=cEnd){ flush(); cEnd=-1; } cluster.push(it); cEnd=Math.max(cEnd,it.e2); });
+  if(cluster.length) flush();
+}
+function drawEv(layer, it, ncol){
+  const top=it.s/60*HOUR_H, h=Math.max((it.e2-it.s)/60*HOUR_H, 16);
+  const w=100/ncol, left=it.col*w;
+  const c=COLORS[it.color]||COLORS.blue;
+  const el=document.createElement('div');
+  el.className='ev'; el.style.top=top+'px'; el.style.height=(h-1)+'px';
+  el.style.left=`calc(${left}% + 1px)`; el.style.width=`calc(${w}% - 2px)`; el.style.background=c;
+  el.innerHTML=`<div class="et">${esc(it.title||'(無題)')}</div>`+(h>28?`<div class="es">${fmtMin(it.s)}${it.end?'–'+fmtMin(it.e2):''}</div>`:'');
+  el.onclick=(ev)=>{ ev.stopPropagation(); openEdit(it.id); };
+  layer.appendChild(el);
+}
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function bindCells(){
+  const days=viewDays();
+  document.querySelectorAll('.col .cell').forEach(cell=>{
+    cell.onclick=()=>{ const di=+cell.dataset.di, h=+cell.dataset.h;
+      openNew(days[di], h);
+    };
+  });
+}
+
+// ===== モーダル =====
+function renderSwatches(sel){
+  document.getElementById('m_sw').innerHTML = Object.keys(COLORS).map(k=>
+    `<div class="sw ${k===sel?'on':''}" data-c="${k}" style="background:${COLORS[k]}" onclick="pickColor('${k}')"></div>`).join('');
+}
+let curColor='blue';
+function pickColor(k){ curColor=k; renderSwatches(k); }
+
+function openNew(d, hour){
+  editId=null; curColor='blue';
+  document.getElementById('mTitle').textContent='新しい予定';
+  document.getElementById('m_del').style.display='none';
+  document.getElementById('m_title').value='';
+  document.getElementById('m_date').value=ymd(d);
+  document.getElementById('m_start').value=`${String(hour).padStart(2,'0')}:00`;
+  document.getElementById('m_end').value=`${String(Math.min(hour+1,23)).padStart(2,'0')}:00`;
+  document.getElementById('m_note').value='';
+  renderSwatches('blue');
+  document.getElementById('ov').classList.add('open');
+  setTimeout(()=>document.getElementById('m_title').focus(),50);
+}
+function openEdit(id){
+  const e=data.events.find(x=>x.id===id); if(!e) return;
+  editId=id; curColor=e.color||'blue';
+  document.getElementById('mTitle').textContent='予定を編集';
+  document.getElementById('m_del').style.display='';
+  document.getElementById('m_title').value=e.title||'';
+  document.getElementById('m_date').value=e.date;
+  document.getElementById('m_start').value=e.start||'09:00';
+  document.getElementById('m_end').value=e.end||'';
+  document.getElementById('m_note').value=e.note||'';
+  renderSwatches(curColor);
+  document.getElementById('ov').classList.add('open');
+}
+function closeModal(){ document.getElementById('ov').classList.remove('open'); editId=null; }
+function saveEvent(){
+  const title=document.getElementById('m_title').value.trim();
+  const date=document.getElementById('m_date').value;
+  const start=document.getElementById('m_start').value;
+  let end=document.getElementById('m_end').value;
+  if(!date || !start){ alert('日付と開始時刻を入れてください'); return; }
+  if(end && parseMin(end)<=parseMin(start)) end=''; // 不正な終了は無視
+  const note=document.getElementById('m_note').value.trim();
+  if(editId){
+    const e=data.events.find(x=>x.id===editId);
+    if(e){ Object.assign(e,{title,date,start,end,note,color:curColor}); }
+  } else {
+    data.events.push({ id:uid(), title, date, start, end, note, color:curColor });
+  }
+  closeModal(); commit();
+}
+function delEvent(){
+  if(!editId) return;
+  const e=data.events.find(x=>x.id===editId);
+  if(!confirm('この予定を削除しますか?\n\n'+(e&&e.title||''))) return;
+  data.events=data.events.filter(x=>x.id!==editId);
+  closeModal(); commit();
+}
+
+function scrollToHour(h){ document.getElementById('scroll').scrollTop=Math.max(0,(h-1))*HOUR_H; }
+
+// 🚨 入力アプリ必須: 起動時に repo から読み戻す (server-wins)。無いと空localStorageが上書きする
+async function initialFetch(){
+  const pat=sync.getPat(); if(!pat) return;
+  try{
+    const url=`https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
+    const res=await fetch(url,{cache:'no-store',headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
+    if(!res.ok) return;
+    const j=await res.json();
+    const remote=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+    if(remote && Array.isArray(remote.events)){
+      data=remote; saveData();
+      const m=sync.getMeta(); m.sha=j.sha; m.lastSync=Date.now(); m.dirty=false; sync.setMeta(m); sync.updateStatus();
+      render();
+    }
+  }catch(e){ console.warn('initialFetch failed',e); }
+}
+
+// ===== 起動 =====
+setView(view);
+render();
+scrollToHour(new Date().getHours());
+initialFetch();
+</script>
+</body>
+</html>

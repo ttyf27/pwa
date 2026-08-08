@@ -519,18 +519,33 @@ function refreshRanking() {
 // 「行ってない店」ランキングから恒久除外する店 (デリ/カフェ等、再訪レコメンド対象外)
 const RANK_EXCLUDE = new Set(['ディーンアンドデルーカ', 'マクドナルド', '町田商店']);
 
+// 店名エイリアス: 語順ゆれ等で別店に割れるのを1本化 (キー=表記ゆれ, 値=正規名)
+// 例: 「しゃぶしゃぶ温野菜」を履歴側の主表記「温野菜しゃぶしゃぶ」へ寄せる
+const STORE_ALIAS = {
+  'しゃぶしゃぶ温野菜': '温野菜しゃぶしゃぶ',
+  '角っこメキシカン': '角っこのメキシカン',
+};
+function canonStore(n){ n = (n || '').trim(); return STORE_ALIAS[n] || n; }
+
 function renderRankingFromData(storeData) {
   // 新PWAデータ (state.entries 食費) をマージして店別最新化
   const stores = {};
   storeData.stores.forEach(s => {
-    stores[s.n] = {
-      name: s.n, visits: s.v, total: s.tot, avg: s.avg,
-      first: s.first, last: s.last,
-    };
+    const n = canonStore(s.n);
+    if (stores[n]) {
+      // 履歴側に表記ゆれで2レコードあった場合も統合
+      const st = stores[n];
+      st.visits += s.v; st.total += s.tot;
+      if (s.first < st.first) st.first = s.first;
+      if (s.last > st.last) st.last = s.last;
+      st.avg = Math.round(st.total / st.visits);
+    } else {
+      stores[n] = { name: n, visits: s.v, total: s.tot, avg: s.avg, first: s.first, last: s.last };
+    }
   });
-  // 新PWAエントリで上書き(同名店があれば最新化)
+  // 新PWAエントリで上書き(同名店があれば最新化。エイリアスで名寄せ)
   state.entries.filter(e => e.type === 'expense' && e.catId === 'food').forEach(e => {
-    const n = (e.name || '').trim();
+    const n = canonStore(e.name);
     if (!n) return;
     if (stores[n]) {
       stores[n].visits += 1;
