@@ -1,4 +1,4 @@
-const CACHE = 'calendar-v2';
+const CACHE = 'calendar-v3';
 const ASSETS = ['./', './index.html', './manifest.json', './sync.js'];
 
 self.addEventListener('install', e => {

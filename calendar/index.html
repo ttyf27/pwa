@@ -52,6 +52,7 @@ button { font-family:inherit; }
 .ev { position:absolute; border-radius:5px; padding:2px 5px; font-size:11px; line-height:1.25; color:#fff; overflow:hidden; pointer-events:auto; cursor:pointer; box-shadow:0 0 0 1px rgba(255,255,255,.6); }
 .ev .et { font-weight:600; overflow:hidden; word-break:break-word; }
 .ev .es { font-size:10px; opacity:.9; }
+.ev.prov { background:rgba(66,133,244,.55) !important; box-shadow:0 0 0 1px #4285F4; z-index:6; }
 .nowline { position:absolute; left:0; right:0; height:2px; background:#EA4335; z-index:5; pointer-events:none; }
 .nowline::before { content:''; position:absolute; left:-4px; top:-3px; width:8px; height:8px; border-radius:50%; background:#EA4335; }
 
@@ -126,6 +127,7 @@ button { font-family:inherit; }
 <script>
 const STORAGE_KEY = 'calendar_data';
 const HOUR_H = 48;                 // 1時間の高さ(px)
+const SNAP = 15;                   // ドラッグ作成の刻み(分)
 const COLORS = { lavender:'#7986CB', blue:'#4285F4', red:'#EA4335', green:'#0B8043', orange:'#F4511E', purple:'#8E24AA', teal:'#00897B', gray:'#616161' };
 const DEFAULT_COLOR = 'lavender';           // 実カレンダーに合わせ既定=ラベンダー
 const WEEK_START = 6;                        // 週の始まり 0=日..6=土 (実カレンダー=土曜始まり)
@@ -253,14 +255,69 @@ function drawEv(layer, it, ncol){
 }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// ドラッグで所要時間を決めて作成 (マウス/トラックパッド=即ドラッグ / タッチ=長押し→ドラッグ)。短タップ=1時間
+const scrollEl = () => document.getElementById('scroll');
+let drag = null;
+function yToMin(col, clientY){
+  const r=col.getBoundingClientRect();
+  let min=Math.round(((clientY-r.top)/HOUR_H*60)/SNAP)*SNAP;
+  return Math.max(0, Math.min(1440, min));
+}
+function freezeScroll(f){ scrollEl().style.overflowY = f ? 'hidden' : 'auto'; }
+function showProv(){
+  if(drag.prov) return;
+  const el=document.createElement('div'); el.className='ev prov';
+  document.getElementById('evl'+drag.di).appendChild(el); drag.prov=el; updateProv();
+}
+function updateProv(){
+  if(!drag.prov) return;
+  const s=Math.min(drag.startMin,drag.curMin), e=Math.max(drag.startMin,drag.curMin);
+  const top=s/60*HOUR_H, h=Math.max((e-s)/60*HOUR_H, 8);
+  drag.prov.style.top=top+'px'; drag.prov.style.height=h+'px'; drag.prov.style.left='1px'; drag.prov.style.right='1px'; drag.prov.style.width='auto';
+  drag.prov.innerHTML=`<div class="es">${fmtMin(s)}–${fmtMin(e===s?e+SNAP:e)}</div>`;
+}
 function bindCells(){
   const days=viewDays();
-  document.querySelectorAll('.col .cell').forEach(cell=>{
-    cell.onclick=()=>{ const di=+cell.dataset.di, h=+cell.dataset.h;
-      openNew(days[di], h);
-    };
+  document.querySelectorAll('.col').forEach(col=>{
+    col.addEventListener('pointerdown', e=>{
+      if(e.target.closest('.ev:not(.prov)')) return;        // 既存予定タップは編集へ
+      const di=+col.dataset.di; const m=yToMin(col,e.clientY);
+      drag={ col, di, day:days[di], startMin:m, curMin:m, ptype:e.pointerType, moved:false, active:false, y0:e.clientY, timer:null };
+      if(e.pointerType==='mouse' || e.pointerType==='pen'){
+        drag.active=true;                                    // マウスは即ドラッグ待機
+      } else {
+        drag.timer=setTimeout(()=>{ if(drag){ drag.active=true; freezeScroll(true); showProv(); } }, 260); // タッチは長押し
+      }
+    });
   });
 }
+window.addEventListener('pointermove', e=>{
+  if(!drag) return;
+  if(drag.timer && Math.abs(e.clientY-drag.y0)>8){ clearTimeout(drag.timer); drag.timer=null; } // 長押し前に動いた=スクロール
+  if(!drag.active) return;
+  e.preventDefault();
+  drag.curMin=yToMin(drag.col, e.clientY);
+  if(Math.abs(drag.curMin-drag.startMin)>=SNAP) drag.moved=true;
+  showProv(); updateProv();
+}, {passive:false});
+function endDrag(commit){
+  if(!drag) return;
+  if(drag.timer) clearTimeout(drag.timer);
+  if(drag.prov) drag.prov.remove();
+  freezeScroll(false);
+  const d=drag; drag=null;
+  if(!commit) return;
+  if(d.moved){
+    const s=Math.min(d.startMin,d.curMin); let e=Math.max(d.startMin,d.curMin); if(e-s<SNAP) e=s+SNAP;
+    openNew(d.day, s, e);
+  } else if(d.ptype!=='touch' || !d.active){
+    openNew(d.day, d.startMin, Math.min(d.startMin+60,1440));  // 短タップ=1時間
+  } else {
+    openNew(d.day, d.startMin, Math.min(d.startMin+SNAP,1440));
+  }
+}
+window.addEventListener('pointerup', ()=> endDrag(true));
+window.addEventListener('pointercancel', ()=> endDrag(false));
 
 // ===== モーダル =====
 function renderSwatches(sel){
@@ -270,14 +327,15 @@ function renderSwatches(sel){
 let curColor=DEFAULT_COLOR;
 function pickColor(k){ curColor=k; renderSwatches(k); }
 
-function openNew(d, hour){
+function hhmm(m){ m=Math.max(0,Math.min(1439,m)); return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`; }
+function openNew(d, sMin, eMin){
   editId=null; curColor=DEFAULT_COLOR;
   document.getElementById('mTitle').textContent='新しい予定';
   document.getElementById('m_del').style.display='none';
   document.getElementById('m_title').value='';
   document.getElementById('m_date').value=ymd(d);
-  document.getElementById('m_start').value=`${String(hour).padStart(2,'0')}:00`;
-  document.getElementById('m_end').value=`${String(Math.min(hour+1,23)).padStart(2,'0')}:00`;
+  document.getElementById('m_start').value=hhmm(sMin);
+  document.getElementById('m_end').value=hhmm(eMin);
   document.getElementById('m_note').value='';
   renderSwatches(DEFAULT_COLOR);
   document.getElementById('ov').classList.add('open');
