@@ -16,6 +16,8 @@ button { font-family:inherit; }
 
 /* ===== ヘッダ ===== */
 .top { display:flex; align-items:center; gap:8px; padding:10px 12px; padding-top:max(10px,env(safe-area-inset-top)); border-bottom:1px solid #e5e5ea; background:#fff; }
+/* Safariのタブ内(非standalone)では上バーが畳まれ、DynamicIsland/ステータスバーとメニューが重なるので余白を確保 */
+body.browser-mode .top { padding-top:max(env(safe-area-inset-top), 46px); }
 .top .title { font-size:17px; font-weight:700; }
 .top .range { font-size:13px; color:#6e6e73; flex:1; }
 .seg { display:flex; background:#f0f0f0; border-radius:8px; overflow:hidden; }
@@ -63,7 +65,8 @@ button { font-family:inherit; }
 .sheet h3 { font-size:16px; font-weight:700; text-align:center; margin-bottom:14px; }
 .fld { margin-bottom:12px; }
 .fld label { display:block; font-size:12px; color:#6e6e73; margin-bottom:4px; }
-.fld input, .fld textarea { width:100%; border:1px solid #d2d2d7; border-radius:8px; font-size:15px; font-family:inherit; padding:9px 10px; outline:none; background:#fff; color:#1d1d1f; }
+.fld input, .fld textarea, .fld select { width:100%; border:1px solid #d2d2d7; border-radius:8px; font-size:15px; font-family:inherit; padding:9px 10px; outline:none; background:#fff; color:#1d1d1f; }
+.fld input:disabled { background:#f2f2f5; color:#aaa; }
 .fld textarea { resize:vertical; min-height:56px; }
 .trow { display:flex; gap:10px; }
 .trow .fld { flex:1; }
@@ -112,6 +115,39 @@ button { font-family:inherit; }
     <div class="trow">
       <div class="fld"><label>開始</label><input id="m_start" type="time" step="300"></div>
       <div class="fld"><label>終了</label><input id="m_end" type="time" step="300"></div>
+    </div>
+    <div class="fld"><label>繰り返し</label>
+      <select id="m_recur" onchange="onRecurChange()">
+        <option value="none">なし</option>
+        <option value="daily">毎日</option>
+        <option value="weekly">毎週</option>
+        <option value="monthly">毎月</option>
+        <option value="yearly">毎年</option>
+        <option value="custom">カスタム…</option>
+      </select>
+    </div>
+    <div id="m_custom" style="display:none">
+      <div class="trow" style="align-items:flex-end">
+        <div class="fld" style="flex:0 0 84px"><label>間隔</label><input id="m_interval" type="number" min="1" value="1"></div>
+        <div class="fld"><label>単位</label>
+          <select id="m_unit">
+            <option value="daily">日ごと</option>
+            <option value="weekly">週ごと</option>
+            <option value="monthly">月ごと</option>
+            <option value="yearly">年ごと</option>
+          </select>
+        </div>
+      </div>
+      <div class="trow" style="align-items:flex-end">
+        <div class="fld"><label>終了</label>
+          <select id="m_endmode" onchange="onEndModeChange()">
+            <option value="never">終了しない</option>
+            <option value="until">日付で終了</option>
+          </select>
+        </div>
+        <div class="fld"><label>終了日</label><input id="m_until" type="date" disabled></div>
+      </div>
+      <div class="note" id="m_recurnote" style="font-size:11px;color:#8e8e93"></div>
     </div>
     <div class="fld"><label>色</label><div class="swatches" id="m_sw"></div></div>
     <div class="fld"><label>メモ</label><textarea id="m_note" placeholder="任意"></textarea></div>
@@ -219,10 +255,29 @@ function render(){
   bindCells();
 }
 
+// 繰り返し: 予定 e がその日 d に出現するか
+function parseYMD(s){ const [y,m,dd]=s.split('-').map(Number); return new Date(y,m-1,dd); }
+function occursOn(e, d){
+  const r=e.recur; if(!r || r.freq==='none') return e.date===ymd(d);
+  const start=parseYMD(e.date);
+  if(d<start) return false;
+  if(r.until){ if(d>parseYMD(r.until)) return false; }
+  const iv=Math.max(1, r.interval||1);
+  const days=Math.round((d-start)/86400000);
+  if(r.freq==='daily')  return days % iv===0;
+  if(r.freq==='weekly') return d.getDay()===start.getDay() && (days/7) % iv===0;
+  if(r.freq==='monthly'){ if(d.getDate()!==start.getDate()) return false;
+    const md=(d.getFullYear()-start.getFullYear())*12+(d.getMonth()-start.getMonth()); return md>=0 && md%iv===0; }
+  if(r.freq==='yearly'){ if(d.getDate()!==start.getDate()||d.getMonth()!==start.getMonth()) return false;
+    const yd=d.getFullYear()-start.getFullYear(); return yd>=0 && yd%iv===0; }
+  return false;
+}
+function dayOccurrences(d){ return data.events.filter(e=> occursOn(e,d)); }
+
 // 重なりレイアウト: クラスタ内で列割当 → 幅=1/列数
 function placeEvents(d, di){
   const key=ymd(d);
-  const evs=data.events.filter(e=>e.date===key)
+  const evs=dayOccurrences(d)
     .map(e=>({...e, s:parseMin(e.start), e2:parseMin(e.end||e.start)}))
     .map(e=>({...e, e2: e.e2>e.s ? e.e2 : e.s+30 }))
     .sort((x,y)=> x.s-y.s || x.e2-y.e2);
@@ -249,7 +304,8 @@ function drawEv(layer, it, ncol){
   const el=document.createElement('div');
   el.className='ev'; el.style.top=top+'px'; el.style.height=(h-1)+'px';
   el.style.left=`calc(${left}% + 1px)`; el.style.width=`calc(${w}% - 2px)`; el.style.background=c;
-  el.innerHTML=`<div class="et">${esc(it.title||'(無題)')}</div>`+(h>28?`<div class="es">${fmtMin(it.s)}${it.end?'–'+fmtMin(it.e2):''}</div>`:'');
+  const rep=(it.recur && it.recur.freq!=='none')?'↻ ':'';
+  el.innerHTML=`<div class="et">${rep}${esc(it.title||'(無題)')}</div>`+(h>28?`<div class="es">${fmtMin(it.s)}${it.end?'–'+fmtMin(it.e2):''}</div>`:'');
   el.onclick=(ev)=>{ ev.stopPropagation(); openEdit(it.id); };
   layer.appendChild(el);
 }
@@ -327,6 +383,57 @@ function renderSwatches(sel){
 let curColor=DEFAULT_COLOR;
 function pickColor(k){ curColor=k; renderSwatches(k); }
 
+// ===== 繰り返し UI =====
+const RECUR_LABEL={daily:'毎日',weekly:'毎週',monthly:'毎月',yearly:'毎年'};
+const UNIT_LABEL={daily:'日',weekly:'週',monthly:'ヶ月',yearly:'年'};
+function onRecurChange(){
+  const v=document.getElementById('m_recur').value;
+  document.getElementById('m_custom').style.display = (v==='custom')?'':'none';
+  updateRecurNote();
+}
+function onEndModeChange(){
+  const until=document.getElementById('m_endmode').value==='until';
+  document.getElementById('m_until').disabled=!until;
+  updateRecurNote();
+}
+function updateRecurNote(){
+  const el=document.getElementById('m_recurnote'); if(!el) return;
+  const iv=Math.max(1,parseInt(document.getElementById('m_interval').value)||1);
+  const unit=document.getElementById('m_unit').value;
+  let s=`${iv}${UNIT_LABEL[unit]}ごとに繰り返し`;
+  if(document.getElementById('m_endmode').value==='until'){ const u=document.getElementById('m_until').value; s+= u?`（${u}まで）`:'（終了日未設定）'; }
+  else s+='（終了しない）';
+  el.textContent=s;
+}
+['m_interval','m_unit','m_until'].forEach(id=>{ document.addEventListener('input',e=>{ if(e.target.id===id) updateRecurNote(); }); });
+// モーダルへ recur を反映 / 読取
+function setRecurUI(recur){
+  const sel=document.getElementById('m_recur');
+  const cu=document.getElementById('m_custom');
+  document.getElementById('m_interval').value=1;
+  document.getElementById('m_unit').value='weekly';
+  document.getElementById('m_endmode').value='never';
+  document.getElementById('m_until').value=''; document.getElementById('m_until').disabled=true;
+  if(!recur || recur.freq==='none'){ sel.value='none'; cu.style.display='none'; return; }
+  const iv=recur.interval||1;
+  if(iv===1 && !recur.until){ sel.value=recur.freq; cu.style.display='none'; }
+  else { // カスタム表示
+    sel.value='custom'; cu.style.display='';
+    document.getElementById('m_interval').value=iv;
+    document.getElementById('m_unit').value=recur.freq;
+    if(recur.until){ document.getElementById('m_endmode').value='until'; document.getElementById('m_until').value=recur.until; document.getElementById('m_until').disabled=false; }
+  }
+  updateRecurNote();
+}
+function readRecurUI(){
+  const v=document.getElementById('m_recur').value;
+  if(v==='none') return null;
+  if(v!=='custom') return { freq:v, interval:1 };
+  const r={ freq:document.getElementById('m_unit').value, interval:Math.max(1,parseInt(document.getElementById('m_interval').value)||1) };
+  if(document.getElementById('m_endmode').value==='until'){ const u=document.getElementById('m_until').value; if(u) r.until=u; }
+  return r;
+}
+
 function hhmm(m){ m=Math.max(0,Math.min(1439,m)); return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`; }
 function openNew(d, sMin, eMin){
   editId=null; curColor=DEFAULT_COLOR;
@@ -337,6 +444,7 @@ function openNew(d, sMin, eMin){
   document.getElementById('m_start').value=hhmm(sMin);
   document.getElementById('m_end').value=hhmm(eMin);
   document.getElementById('m_note').value='';
+  setRecurUI(null);
   renderSwatches(DEFAULT_COLOR);
   document.getElementById('ov').classList.add('open');
   setTimeout(()=>document.getElementById('m_title').focus(),50);
@@ -351,6 +459,7 @@ function openEdit(id){
   document.getElementById('m_start').value=e.start||'09:00';
   document.getElementById('m_end').value=e.end||'';
   document.getElementById('m_note').value=e.note||'';
+  setRecurUI(e.recur);
   renderSwatches(curColor);
   document.getElementById('ov').classList.add('open');
 }
@@ -363,18 +472,22 @@ function saveEvent(){
   if(!date || !start){ alert('日付と開始時刻を入れてください'); return; }
   if(end && parseMin(end)<=parseMin(start)) end=''; // 不正な終了は無視
   const note=document.getElementById('m_note').value.trim();
+  const recur=readRecurUI();
   if(editId){
     const e=data.events.find(x=>x.id===editId);
-    if(e){ Object.assign(e,{title,date,start,end,note,color:curColor}); }
+    if(e){ Object.assign(e,{title,date,start,end,note,color:curColor}); if(recur) e.recur=recur; else delete e.recur; }
   } else {
-    data.events.push({ id:uid(), title, date, start, end, note, color:curColor });
+    const ev={ id:uid(), title, date, start, end, note, color:curColor };
+    if(recur) ev.recur=recur;
+    data.events.push(ev);
   }
   closeModal(); commit();
 }
 function delEvent(){
   if(!editId) return;
   const e=data.events.find(x=>x.id===editId);
-  if(!confirm('この予定を削除しますか?\n\n'+(e&&e.title||''))) return;
+  const rep=(e&&e.recur&&e.recur.freq!=='none')?'（繰り返し予定をすべて）':'';
+  if(!confirm('この予定を削除しますか?'+rep+'\n\n'+(e&&e.title||''))) return;
   data.events=data.events.filter(x=>x.id!==editId);
   closeModal(); commit();
 }
@@ -399,6 +512,11 @@ async function initialFetch(){
 }
 
 // ===== 起動 =====
+// Safariのタブ内(非standalone)判定 → 上部余白を確保 (DynamicIsland重なり対策)
+(function(){
+  const standalone = window.navigator.standalone===true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  if(!standalone) document.body.classList.add('browser-mode');
+})();
 setView(view);
 render();
 scrollToHour(new Date().getHours());
