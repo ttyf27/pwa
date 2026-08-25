@@ -1,4 +1,4 @@
-const CACHE = 'dashboard-v1';
+const CACHE = 'dashboard-v2';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {

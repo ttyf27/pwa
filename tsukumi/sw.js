@@ -1,4 +1,4 @@
-const CACHE = 'tsukumi-v1';
+const CACHE = 'tsukumi-v2';
 const ASSETS = ['./', './index.html', './manifest.json', './sync.js'];
 
 self.addEventListener('install', e => {

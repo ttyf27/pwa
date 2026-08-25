@@ -1,4 +1,4 @@
-const CACHE = 'gohan-v3';
+const CACHE = 'gohan-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './sync.js'];
 
 self.addEventListener('install', e => {
