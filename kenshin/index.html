@@ -1,0 +1,505 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e7490">
+<link rel="manifest" href="manifest.json">
+<title>健康診断</title>
+<style>
+:root{
+  --bg:#eef1f5; --card:#fff; --ink:#16202b; --sub:#6b7785; --line:#e6eaef;
+  --teal:#0e7490; --teal-soft:#e0f2f5;
+  --ok:#12a150; --ok-soft:#e6f6ec; --warn:#e08a00; --warn-soft:#fdf1dd;
+  --bad:#e5484d; --bad-soft:#fdecec; --band:#0e749018;
+  --safe-top:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Helvetica Neue",sans-serif;
+  background:var(--bg); color:var(--ink); font-size:14px; line-height:1.5;
+  overflow-x:hidden; -webkit-text-size-adjust:100%;
+  padding-bottom:40px;
+}
+body.browser-mode .topbar{padding-top:max(var(--safe-top),46px);}
+.topbar{
+  position:sticky; top:0; z-index:30; background:var(--teal); color:#fff;
+  padding:calc(var(--safe-top) + 10px) 16px 10px; display:flex; align-items:center; gap:10px;
+  box-shadow:0 1px 6px rgba(0,0,0,.12);
+}
+.topbar h1{font-size:17px; font-weight:700; margin:0; flex:1; letter-spacing:.02em;}
+.topbar .sub{font-size:11px; opacity:.85; font-weight:400; margin-left:4px;}
+.hbtn{
+  background:rgba(255,255,255,.16); border:none; color:#fff; font-size:15px;
+  width:34px; height:34px; border-radius:9px; cursor:pointer; display:grid; place-items:center;
+}
+.hbtn:active{background:rgba(255,255,255,.3);}
+.wrap{max-width:640px; margin:0 auto; padding:14px 12px 0;}
+
+/* hero */
+.hero{background:var(--card); border-radius:16px; padding:15px 15px 6px; box-shadow:0 1px 3px rgba(20,32,43,.06); margin-bottom:14px;}
+.hero-head{display:flex; align-items:baseline; gap:8px; margin-bottom:12px;}
+.hero-date{font-size:20px; font-weight:800;}
+.hero-meta{font-size:12px; color:var(--sub);}
+.tiles{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px;}
+.tile{border:1px solid var(--line); border-radius:12px; padding:9px 8px 8px; text-align:left; position:relative; overflow:hidden;}
+.tile .tn{font-size:10.5px; color:var(--sub); font-weight:600; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.tile .tv{font-size:19px; font-weight:800; line-height:1.15; margin-top:2px;}
+.tile .tu{font-size:10px; color:var(--sub); font-weight:600; margin-left:2px;}
+.tile .td{font-size:10.5px; margin-top:1px; font-weight:600;}
+.tile.s-ok{background:var(--ok-soft);} .tile.s-ok .tv{color:var(--ok);}
+.tile.s-warn{background:var(--warn-soft);} .tile.s-warn .tv{color:#b56b00;}
+.tile.s-bad{background:var(--bad-soft);} .tile.s-bad .tv{color:var(--bad);}
+.up{color:var(--bad);} .down{color:var(--ok);} .flat{color:var(--sub);}
+
+/* out-of-range */
+.oor{background:var(--card); border-radius:14px; padding:13px 14px; box-shadow:0 1px 3px rgba(20,32,43,.06); margin-bottom:14px;}
+.oor h2{font-size:13px; margin:0 0 9px; font-weight:700; display:flex; align-items:center; gap:6px;}
+.oor h2 .cnt{background:var(--bad); color:#fff; font-size:11px; border-radius:20px; padding:1px 8px;}
+.chips{display:flex; flex-wrap:wrap; gap:7px;}
+.chip{background:var(--bad-soft); color:var(--bad); border:1px solid #f6cdce; border-radius:20px; padding:4px 10px; font-size:11.5px; font-weight:600; cursor:pointer;}
+.chip.amber{background:var(--warn-soft); color:#b56b00; border-color:#f2dcae;}
+.chip .cv{opacity:.8; font-weight:700; margin-left:3px;}
+
+/* nav */
+.nav{display:flex; gap:7px; overflow-x:auto; padding:2px 2px 12px; margin:0 -2px; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+.nav::-webkit-scrollbar{display:none;}
+.nav button{flex:0 0 auto; background:var(--card); border:1px solid var(--line); color:var(--sub); border-radius:20px; padding:6px 13px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;}
+.nav button.on{background:var(--teal); color:#fff; border-color:var(--teal);}
+
+/* section */
+.sec{margin-bottom:20px;}
+.sec-h{font-size:13px; font-weight:700; color:var(--sub); margin:0 4px 9px; letter-spacing:.03em;}
+.grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px;}
+@media(max-width:400px){.grid{grid-template-columns:1fr;}}
+.mcard{background:var(--card); border-radius:14px; padding:11px 12px 8px; box-shadow:0 1px 3px rgba(20,32,43,.06); cursor:pointer; border:1px solid transparent; position:relative;}
+.mcard:active{border-color:var(--teal);}
+.mcard .mtop{display:flex; justify-content:space-between; align-items:flex-start; gap:6px;}
+.mcard .mname{font-size:12px; font-weight:700; color:var(--ink);}
+.mcard .mflag{font-size:9.5px; font-weight:700; padding:1px 6px; border-radius:10px; white-space:nowrap;}
+.mflag.f-ok{background:var(--ok-soft); color:var(--ok);}
+.mflag.f-warn{background:var(--warn-soft); color:#b56b00;}
+.mflag.f-bad{background:var(--bad-soft); color:var(--bad);}
+.mcard .mval{margin-top:3px; display:flex; align-items:baseline; gap:5px;}
+.mcard .mv{font-size:22px; font-weight:800; line-height:1;}
+.mcard .mu{font-size:10px; color:var(--sub); font-weight:600;}
+.mcard .mtrend{font-size:10.5px; font-weight:600; margin-left:auto;}
+.spark{margin-top:6px; width:100%; height:44px; display:block;}
+.mcard .mref{font-size:10px; color:var(--sub); margin-top:2px;}
+.mrow{background:var(--card); border-radius:12px; padding:9px 12px; box-shadow:0 1px 3px rgba(20,32,43,.06); display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; cursor:pointer;}
+.mrow .rn{font-size:12.5px; font-weight:600;}
+.mrow .rv{font-size:13px; font-weight:700; text-align:right;}
+.mrow .rd{font-size:10px; color:var(--sub);}
+
+.msg{text-align:center; color:var(--sub); padding:50px 20px; font-size:13px; line-height:1.7;}
+
+/* modal */
+.ov{position:fixed; inset:0; background:rgba(15,23,32,.5); z-index:100; display:none; align-items:flex-end; justify-content:center;}
+.ov.show{display:flex;}
+.sheet{background:var(--card); width:100%; max-width:560px; border-radius:20px 20px 0 0; max-height:88vh; overflow-y:auto; padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 24px); -webkit-overflow-scrolling:touch;}
+.sheet-grab{width:38px; height:4px; background:#d3d9e0; border-radius:3px; margin:8px auto 4px;}
+.sheet-h{padding:6px 18px 12px; border-bottom:1px solid var(--line);}
+.sheet-h .sh-name{font-size:18px; font-weight:800;}
+.sheet-h .sh-cat{font-size:11px; color:var(--teal); font-weight:700; background:var(--teal-soft); display:inline-block; padding:1px 9px; border-radius:12px; margin-bottom:5px;}
+.sheet-h .sh-latest{font-size:13px; color:var(--sub); margin-top:5px;}
+.sheet-body{padding:14px 18px;}
+.bigspark{width:100%; height:150px; display:block; margin:2px 0 6px;}
+.exp{background:var(--teal-soft); border-radius:12px; padding:12px 13px; font-size:12.5px; line-height:1.65; margin:10px 0;}
+.exp .el{font-weight:700; color:var(--teal); font-size:11.5px; margin-bottom:3px; display:flex; align-items:center; gap:5px;}
+.exp .row{margin-bottom:7px;}
+.exp .row:last-child{margin-bottom:0;}
+.exp .k{font-weight:700;}
+.disc{font-size:10.5px; color:var(--sub); margin-top:9px; line-height:1.5;}
+.htable{width:100%; border-collapse:collapse; font-size:12px; margin-top:8px;}
+.htable th{text-align:left; color:var(--sub); font-weight:600; font-size:10.5px; padding:5px 6px; border-bottom:1px solid var(--line);}
+.htable td{padding:6px; border-bottom:1px solid var(--line);}
+.htable td.v{font-weight:700; text-align:right;}
+.htable .fg{font-size:10px; padding:1px 5px; border-radius:8px; margin-left:5px;}
+.close-x{position:absolute; top:calc(var(--safe-top) + 10px); right:14px;}
+</style>
+
+<div class="topbar">
+  <h1>🩺 健康診断<span class="sub" id="spanCount"></span></h1>
+  <button class="hbtn" id="reloadBtn" title="再取得">🔄</button>
+  <button class="hbtn" id="syncStatusBtn" title="設定">⚙️</button>
+</div>
+
+<div class="wrap" id="wrap">
+  <div class="msg" id="msg">読み込み中…</div>
+</div>
+
+<div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
+
+<script src="sync.js"></script>
+<script>
+const STORAGE_KEY = 'kenshin_cache';
+
+const sync = new GitHubSync({
+  appName:'kenshin', repoOwner:'ttyf27', repoName:'mylife',
+  filePath:'data/pwa/kenshin.json', branch:'claude/garmin-data-analysis-V2xrD',
+  getData:()=>({}), // 閲覧専用(pushしない)
+});
+sync.attachStatusElement(document.getElementById('syncStatusBtn'));
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+// Dynamic Island 回避 (standalone以外=ブラウザ表示のとき上部に余白)
+if(!(window.matchMedia('(display-mode: standalone)').matches || navigator.standalone)){
+  document.body.classList.add('browser-mode');
+}
+
+/* ===== ヒーローに出す主要指標 ===== */
+const HERO = ['BMI','収縮期血圧','中性脂肪','空腹時血糖','HbA1c','γ-GTP'];
+
+/* ===== 一般解説 (AI作成・診断/医療助言ではない) ===== */
+const EXPLAIN = {
+  'BMI':{d:'体重(kg)÷身長(m)²。体格の指標。',hi:'高いと肥満傾向。内臓脂肪・生活習慣病リスクの目安。',lo:'低いとやせ傾向。',std:'18.5〜24.9が標準域。'},
+  '腹囲':{d:'へそ周り。内臓脂肪の代理指標でメタボ判定に使う。',hi:'男性85cm以上でメタボ該当基準の一つ。',lo:'',std:'男性85cm未満が目安。'},
+  '体脂肪率':{d:'体重に占める脂肪の割合。',hi:'高いと体脂肪過多。',lo:'低すぎも不調の要因。',std:'成人男性はおおむね10〜20%台。'},
+  '収縮期血圧':{d:'心臓が縮んで血を押し出す時の圧（上の血圧）。',hi:'高いと高血圧。血管・心臓・腎臓の負担。',lo:'',std:'診察室では130未満が目安。'},
+  '拡張期血圧':{d:'心臓が広がって血をためる時の圧（下の血圧）。',hi:'高いと高血圧。',lo:'',std:'85未満が目安。'},
+  '心拍数':{d:'安静時の1分あたりの脈。',hi:'高いと交感神経優位・脱水・カフェインなど。',lo:'鍛えている人は低め。',std:'おおむね45〜85。'},
+  '中性脂肪':{d:'エネルギー源の脂肪。食事・飲酒・糖質で上下しやすい。',hi:'高いと動脈硬化・脂肪肝リスク。飲酒/糖質/食べ過ぎで上がる。',lo:'低いのは基本的に問題になりにくい。',std:'30〜149が基準域（空腹時）。'},
+  'HDL':{d:'いわゆる「善玉」コレステロール。余分な脂質を回収。',hi:'高い分にはむしろ良い。',lo:'低いと動脈硬化リスク。運動・禁煙で上がる。',std:'40以上が目安。'},
+  'LDL':{d:'いわゆる「悪玉」コレステロール。',hi:'高いと動脈硬化・心筋梗塞リスク。',lo:'',std:'120未満が目安（リスクにより基準は変動）。'},
+  '総コレステロール':{d:'血中コレステロールの総量。',hi:'高いと脂質異常。',lo:'',std:'140〜199が目安。'},
+  'non-HDLコレステロール':{d:'総コレステロールからHDLを引いた値。動脈硬化リスクの総合指標。',hi:'高いとリスク上昇。',lo:'',std:'150未満が目安。'},
+  'AST':{d:'肝臓・心臓・筋肉の細胞に含まれる酵素（GOT）。',hi:'高いと肝細胞の障害や飲酒・筋肉負荷の影響。',lo:'',std:'30以下が目安。'},
+  'ALT':{d:'主に肝臓の細胞に含まれる酵素（GPT）。肝障害に鋭敏。',hi:'高いと肝細胞の障害・脂肪肝。ALT>ASTは脂肪肝で多い。',lo:'',std:'30以下が目安。'},
+  'γ-GTP':{d:'肝臓・胆道系の酵素。アルコールに鋭敏に反応。',hi:'高いと飲酒・胆道系・脂肪肝の影響。減酒で下がりやすい。',lo:'',std:'50以下が目安。'},
+  '総ビリルビン':{d:'赤血球が壊れてできる色素。肝・胆道で処理される。',hi:'高いと体質性（ジルベール等）や胆道の要因。',lo:'',std:'0.3〜1.2が目安。'},
+  '総蛋白':{d:'血液中のタンパク質の総量。',hi:'高いと脱水・炎症など。',lo:'低いと栄養・肝・腎の要因。',std:'6.5〜7.9が目安。'},
+  'アルブミン':{d:'肝臓で作られる主要タンパク。栄養状態の指標。',hi:'',lo:'低いと肝機能低下・低栄養。',std:'3.9〜5.1が目安。'},
+  '血清アミラーゼ':{d:'膵臓・唾液腺の消化酵素。',hi:'高いと膵臓・唾液腺の要因。',lo:'',std:'44〜132が目安。'},
+  'ALP':{d:'肝・胆道・骨に多い酵素。',hi:'高いと胆道系や骨代謝の要因。',lo:'',std:'測定法により基準が変わる。'},
+  'LDH':{d:'全身の細胞に広く含まれる酵素。',hi:'高いと細胞の破壊・溶血・炎症など。',lo:'',std:'124〜222が目安。'},
+  'クレアチニン':{d:'筋肉由来の老廃物。腎臓が排出する。',hi:'高いと腎機能低下の可能性。',lo:'筋肉量が少ないと低め。',std:'0.6〜1.0が目安。'},
+  'eGFR':{d:'クレアチニンと年齢から推定した腎臓のろ過能力。',hi:'高い分には問題なし。',lo:'低いと腎機能低下。60未満が続くと要注意。',std:'60以上が目安。'},
+  'BUN':{d:'尿素窒素。タンパク代謝の老廃物。',hi:'高いと脱水・腎機能・高タンパク食。',lo:'',std:'8〜20が目安。'},
+  '尿酸':{d:'プリン体代謝の最終産物。',hi:'高いと痛風・尿路結石リスク。飲酒/肉/果糖で上がる。',lo:'',std:'7.0以下が目安。'},
+  'Na':{d:'ナトリウム。体液バランスの電解質。',hi:'',lo:'',std:'138〜145が目安。'},
+  'K':{d:'カリウム。心臓・筋肉に重要な電解質。',hi:'高低とも不整脈に関わる。',lo:'',std:'3.6〜4.8が目安。'},
+  'Ca':{d:'カルシウム。骨・神経・筋の電解質。',hi:'',lo:'',std:'8.8〜10.1が目安。'},
+  '空腹時血糖':{d:'絶食後の血糖値。糖代謝の基本指標。',hi:'高いと糖尿病・耐糖能異常。126以上で糖尿病型。',lo:'低血糖にも注意。',std:'70〜99が正常域、100〜125で境界。'},
+  'HbA1c':{d:'過去1〜2ヶ月の血糖の平均を反映。',hi:'高いと糖尿病リスク。6.5%以上で糖尿病型の目安。',lo:'',std:'5.5%以下が目安（NGSP）。'},
+  '血色素量Hb':{d:'赤血球中のヘモグロビン量。貧血の指標。',hi:'高いと多血・脱水。',lo:'低いと貧血。',std:'男性13.1〜16.3が目安。'},
+  '赤血球数':{d:'血液中の赤血球の数。',hi:'高いと多血・脱水。',lo:'低いと貧血。',std:'男性400〜539万が目安。'},
+  'ヘマトクリット':{d:'血液に占める赤血球の体積割合。',hi:'高いと脱水・多血。',lo:'低いと貧血。',std:'男性38.5〜48.9%が目安。'},
+  '白血球数':{d:'免疫を担う細胞の数。',hi:'高いと感染・炎症・喫煙。',lo:'低いと免疫低下・ウイルス。',std:'3100〜8400が目安。'},
+  '血小板数':{d:'止血を担う細胞の数。',hi:'高いと炎症など。',lo:'低いと出血傾向・肝疾患。',std:'13〜35万が目安。'},
+  'MCV':{d:'赤血球1個の平均の大きさ。貧血の型を分ける。',hi:'大きいとB12/葉酸不足・飲酒。',lo:'小さいと鉄欠乏。',std:'83〜101が目安。'},
+  'CRP':{d:'体内の炎症で上がるタンパク。',hi:'高いと感染・炎症・組織障害。',lo:'',std:'0.3以下が目安。'},
+  'Hbs抗原':{d:'B型肝炎ウイルスの感染を示す抗原。',hi:'陽性はB型肝炎ウイルスの持続感染を示唆。',lo:'',std:'陰性が正常。'},
+  'HBs抗原':{d:'B型肝炎ウイルスの感染を示す抗原。',hi:'陽性はB型肝炎ウイルスの持続感染を示唆。',lo:'',std:'陰性が正常。'},
+  'PSA':{d:'前立腺特異抗原。前立腺の腫瘍マーカー。',hi:'高いと前立腺の炎症・肥大・がんの可能性。',lo:'',std:'4.0以下が目安。'},
+  'CEA':{d:'消化器系などの腫瘍マーカー。',hi:'高いと悪性腫瘍・喫煙などの可能性。',lo:'',std:'5.0以下が目安。'},
+  '%肺活量':{d:'年齢・体格から予測した肺活量に対する実測の割合。',hi:'',lo:'80%未満で拘束性の要因。',std:'80%以上が目安。'},
+  '1秒率':{d:'思い切り吐いた息の最初の1秒で出せる割合。',hi:'',lo:'70%未満で閉塞性（喘息/COPD等）の要因。',std:'70%以上が目安。'},
+};
+function explainFor(name){
+  if(EXPLAIN[name]) return EXPLAIN[name];
+  const base=name.replace(/^[🔴🆕🎯]/,'').replace(/訂正$/,'').replace(/右$|左$/,'');
+  return EXPLAIN[base]||null;
+}
+
+/* ===== ステータス判定 ===== */
+function statusOf(item, num){
+  if(num==null || !item.ref) return null;
+  const [lo,hi]=item.ref;
+  if(num<lo || num>hi) return 'bad';
+  // 境界域は「両側に実基準がある」項目だけ（片側だけの 0 / 999 センチネルでは判定しない）
+  const twoSided = lo>0 && hi<900;
+  if(twoSided){
+    const span=hi-lo;
+    if(num>hi-span*0.08 || num<lo+span*0.08) return 'warn';
+  }
+  return 'ok';
+}
+function flagStatus(flag){
+  if(!flag) return null;
+  const f=String(flag);
+  if(/[✅AＡ]/.test(f)) return 'ok';
+  if(/[BＢCＣ▲]/.test(f)) return 'warn';
+  return 'bad';
+}
+
+/* ===== トレンド (初回→最新) ===== */
+function trendOf(pts){
+  const nums=pts.filter(p=>p.num!=null);
+  if(nums.length<2) return null;
+  const a=nums[0].num, b=nums[nums.length-1].num;
+  const diff=b-a;
+  if(Math.abs(diff)<Math.abs(a)*0.03) return {dir:'flat',diff};
+  return {dir:diff>0?'up':'down',diff};
+}
+
+/* ===== スパークライン SVG ===== */
+function sparkline(item, w, h, big){
+  const pts=item.points.filter(p=>p.num!=null);
+  if(pts.length<1) return '';
+  const pad=big?{l:34,r:10,t:12,b:20}:{l:6,r:6,t:8,b:6};
+  const iw=w-pad.l-pad.r, ih=h-pad.t-pad.b;
+  const xs=pts.map(p=>+p.date.slice(0,4)+ (+p.date.slice(5,7)-1)/12);
+  const x0=Math.min(...xs), x1=Math.max(...xs);
+  const vals=pts.map(p=>p.num);
+  let ymin=Math.min(...vals), ymax=Math.max(...vals);
+  const ref=item.ref;
+  if(ref){ if(ref[0]>0&&ref[0]<900) ymin=Math.min(ymin,ref[0]); if(ref[1]<900) ymax=Math.max(ymax,ref[1]); }
+  if(ymin===ymax){ ymin-=1; ymax+=1; }
+  const yr=(ymax-ymin)||1; ymin-=yr*0.12; ymax+=yr*0.12;
+  const X=v=> pad.l + (x1===x0?iw/2:(v-x0)/(x1-x0)*iw);
+  const Y=v=> pad.t + (1-(v-ymin)/(ymax-ymin))*ih;
+  let svg=`<svg class="${big?'bigspark':'spark'}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">`;
+  // 基準帯
+  if(ref){
+    const bl=ref[0]<900?ref[0]:ymin, bh=ref[1]<900?ref[1]:ymax;
+    const yTop=Y(Math.min(bh,ymax)), yBot=Y(Math.max(bl,ymin));
+    svg+=`<rect x="${pad.l}" y="${yTop}" width="${iw}" height="${Math.max(0,yBot-yTop)}" fill="#0e749015"/>`;
+    if(big){
+      if(ref[1]<900){ svg+=`<line x1="${pad.l}" y1="${Y(ref[1])}" x2="${w-pad.r}" y2="${Y(ref[1])}" stroke="#0e749055" stroke-width="1" stroke-dasharray="3 3"/><text x="${pad.l-4}" y="${Y(ref[1])+3}" font-size="9" fill="#0e7490" text-anchor="end">${ref[1]}</text>`; }
+      if(ref[0]>0&&ref[0]<900){ svg+=`<line x1="${pad.l}" y1="${Y(ref[0])}" x2="${w-pad.r}" y2="${Y(ref[0])}" stroke="#0e749055" stroke-width="1" stroke-dasharray="3 3"/><text x="${pad.l-4}" y="${Y(ref[0])+3}" font-size="9" fill="#0e7490" text-anchor="end">${ref[0]}</text>`; }
+    }
+  }
+  // 折れ線
+  if(pts.length>1){
+    const dd=pts.map(p=>`${X(+p.date.slice(0,4)+(+p.date.slice(5,7)-1)/12)},${Y(p.num)}`).join(' ');
+    svg+=`<polyline points="${dd}" fill="none" stroke="#0e7490" stroke-width="${big?2:1.6}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  // 点
+  pts.forEach((p,i)=>{
+    const cx=X(+p.date.slice(0,4)+(+p.date.slice(5,7)-1)/12), cy=Y(p.num);
+    const st=statusOf(item,p.num);
+    const col= st==='bad'?'#e5484d': st==='warn'?'#e08a00':'#0e7490';
+    const last=i===pts.length-1;
+    svg+=`<circle cx="${cx}" cy="${cy}" r="${big?3.5:(last?2.8:1.8)}" fill="${last?col:'#fff'}" stroke="${col}" stroke-width="1.5"/>`;
+    if(big){
+      svg+=`<text x="${cx}" y="${cy-7}" font-size="9" fill="#16202b" text-anchor="middle" font-weight="700">${p.value}</text>`;
+      svg+=`<text x="${cx}" y="${h-6}" font-size="8.5" fill="#6b7785" text-anchor="middle">'${p.date.slice(2,4)}</text>`;
+    }
+  });
+  svg+='</svg>';
+  return svg;
+}
+
+/* ===== 状態保持 ===== */
+let DATA=null, CURCAT='__summary';
+
+function render(data){
+  DATA=data;
+  document.getElementById('spanCount').textContent =
+    data && data.items ? ` ${data.n_dates}回・${data.items.length}項目` : '';
+  const wrap=document.getElementById('wrap');
+  if(!data || !data.items){ wrap.innerHTML='<div class="msg">データがありません</div>'; return; }
+  wrap.innerHTML = navHtml(data) + bodyHtml(data);
+  bindNav();
+}
+
+function navHtml(data){
+  const cats=['__summary', ...data.categories.filter(c=>data.items.some(it=>it.category===c))];
+  const label=c=> c==='__summary'?'📋 サマリー':c;
+  return `<div class="nav" id="nav">`+
+    cats.map(c=>`<button data-cat="${c}" class="${c===CURCAT?'on':''}">${label(c)}</button>`).join('')+
+    `</div><div id="body"></div>`;
+}
+
+function bindNav(){
+  document.querySelectorAll('#nav button').forEach(b=>{
+    b.onclick=()=>{ CURCAT=b.dataset.cat; document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('on',x===b)); document.getElementById('body').innerHTML=bodyInner(DATA); bindCards(); if(CURCAT!=='__summary')window.scrollTo({top:0}); };
+  });
+  document.getElementById('body').innerHTML=bodyInner(DATA);
+  bindCards();
+}
+function bodyHtml(){ return ''; }
+
+function itemByName(n){ return DATA.items.find(it=>it.item===n); }
+
+function bodyInner(data){
+  if(CURCAT==='__summary') return summaryHtml(data);
+  const items=data.items.filter(it=>it.category===CURCAT);
+  return catHtml(CURCAT, items);
+}
+
+function summaryHtml(data){
+  // ヒーロー
+  const latest=data.dates[data.dates.length-1];
+  let latestAge='';
+  for(const it of data.items){ if(it.latest && it.latest.date===latest && it.latest.age){ latestAge=it.latest.age; break; } }
+  let tiles='';
+  HERO.forEach(nm=>{
+    const it=itemByName(nm); if(!it||!it.latest) return;
+    const num=it.latest.num, st=statusOf(it,num)||'ok';
+    const tr=trendOf(it.points);
+    const arrow= tr? (tr.dir==='up'?'▲':tr.dir==='down'?'▼':'→'):'';
+    const arrowCls= tr? (tr.dir==='up'?'up':tr.dir==='down'?'down':'flat'):'';
+    tiles+=`<div class="tile s-${st}" data-open="${nm}">
+      <div class="tn">${nm}</div>
+      <div class="tv">${it.latest.value}<span class="tu">${it.unit||''}</span></div>
+      <div class="td ${arrowCls}">${arrow} ${tr?fmtDiff(tr.diff):''}</div>
+    </div>`;
+  });
+  // 基準外
+  const oor=collectOOR(data);
+  let oorHtml='';
+  if(oor.length){
+    oorHtml=`<div class="oor"><h2>⚠️ 最新健診で基準外・要注意 <span class="cnt">${oor.length}</span></h2><div class="chips">`+
+      oor.map(o=>`<span class="chip ${o.level==='warn'?'amber':''}" data-open="${o.name}">${o.name}<span class="cv">${o.val}</span></span>`).join('')+
+      `</div></div>`;
+  }
+  // カテゴリ別トピック: 主要な推移をいくつか
+  const focus=['中性脂肪','γ-GTP','空腹時血糖','BMI','収縮期血圧','eGFR'];
+  let cards='';
+  focus.forEach(nm=>{ const it=itemByName(nm); if(it&&it.points.filter(p=>p.num!=null).length>=2) cards+=metricCard(it); });
+  return `<div class="hero">
+      <div class="hero-head"><div class="hero-date">${fmtDate(latest)}</div><div class="hero-meta">最新健診${latestAge?' ・ '+latestAge+'歳':''}</div></div>
+      <div class="tiles">${tiles}</div>
+    </div>
+    ${oorHtml}
+    <div class="sec"><div class="sec-h">📈 主要指標の推移</div><div class="grid">${cards}</div></div>
+    <div class="msg" style="padding:20px 10px 4px">上のタブで項目カテゴリを切り替え。カード/チップをタップで詳細と解説。</div>`;
+}
+
+function collectOOR(data){
+  const latest=data.dates[data.dates.length-1];
+  const out=[];
+  for(const it of data.items){
+    if(!it.latest) continue;
+    // 既往歴・自覚症状・生活指導など「過去/記述」項目は現在の基準外として扱わない
+    if(/^(既往歴|自覚症状|生活指導|特定保健指導|総合判定_所見)/.test(it.item)) continue;
+    // 数値の基準外
+    if(it.ref && it.latest.num!=null){
+      const st=statusOf(it,it.latest.num);
+      if(st==='bad') out.push({name:it.item, val:it.latest.value+(it.unit||''), level:'bad', sort:0});
+      else if(st==='warn') out.push({name:it.item, val:it.latest.value+(it.unit||''), level:'warn', sort:1});
+    } else if(it.latest.flag){
+      const fs=flagStatus(it.latest.flag);
+      if(fs==='bad') out.push({name:it.item, val:String(it.latest.value).slice(0,8), level:'bad', sort:0});
+      else if(fs==='warn') out.push({name:it.item, val:String(it.latest.value).slice(0,8), level:'warn', sort:1});
+    }
+  }
+  return out.sort((a,b)=>a.sort-b.sort);
+}
+
+function catHtml(cat, items){
+  // n>=2 & numeric → カード, それ以外 → 行
+  const cards=items.filter(it=>it.numeric && it.points.filter(p=>p.num!=null).length>=2);
+  const rows=items.filter(it=>!(it.numeric && it.points.filter(p=>p.num!=null).length>=2));
+  let h=`<div class="sec"><div class="sec-h">${cat} ・ ${items.length}項目</div>`;
+  if(cards.length) h+=`<div class="grid">`+cards.map(metricCard).join('')+`</div>`;
+  if(rows.length) h+=`<div style="margin-top:${cards.length?12:0}px">`+rows.map(metricRow).join('')+`</div>`;
+  h+=`</div>`;
+  return h;
+}
+
+function metricCard(it){
+  const num=it.latest?it.latest.num:null;
+  const st=statusOf(it,num);
+  const tr=trendOf(it.points);
+  const arrow= tr?(tr.dir==='up'?'▲':tr.dir==='down'?'▼':'→'):'';
+  const arrowCls= tr?(tr.dir==='up'?'up':tr.dir==='down'?'down':'flat'):'';
+  let flagHtml='';
+  if(st==='bad') flagHtml='<span class="mflag f-bad">基準外</span>';
+  else if(st==='warn') flagHtml='<span class="mflag f-warn">境界</span>';
+  else if(st==='ok') flagHtml='<span class="mflag f-ok">基準内</span>';
+  const refTxt = it.ref? refText(it.ref, it.unit):'';
+  return `<div class="mcard" data-open="${esc(it.item)}">
+    <div class="mtop"><span class="mname">${it.item}</span>${flagHtml}</div>
+    <div class="mval"><span class="mv" style="${st==='bad'?'color:var(--bad)':st==='warn'?'color:#b56b00':''}">${it.latest?it.latest.value:'-'}</span><span class="mu">${it.unit||''}</span>
+      <span class="mtrend ${arrowCls}">${arrow}${tr?' '+fmtDiff(tr.diff):''}</span></div>
+    ${sparkline(it,150,44,false)}
+    <div class="mref">${refTxt}</div>
+  </div>`;
+}
+
+function metricRow(it){
+  const last=it.latest;
+  const fs= last&&last.flag? flagStatus(last.flag):null;
+  const col= fs==='bad'?'color:var(--bad)':fs==='warn'?'color:#b56b00':'';
+  const fl= last&&last.flag?`<span style="font-size:10px;${col};font-weight:700"> ${esc(String(last.flag))}</span>`:'';
+  return `<div class="mrow" data-open="${esc(it.item)}">
+    <div><div class="rn">${it.item}</div><div class="rd">${last?fmtDate(last.date):''}${it.points.length>1?' ・ '+it.points.length+'回':''}</div></div>
+    <div class="rv" style="${col}">${last?esc(String(last.value)):'-'}<span class="rd" style="font-weight:600"> ${it.unit||''}</span>${fl}</div>
+  </div>`;
+}
+
+function bindCards(){
+  document.querySelectorAll('[data-open]').forEach(el=>{
+    el.onclick=()=>openSheet(el.dataset.open);
+  });
+}
+
+/* ===== 詳細シート ===== */
+function openSheet(name){
+  const it=itemByName(name); if(!it) return;
+  const ex=explainFor(name);
+  const st=statusOf(it, it.latest?it.latest.num:null);
+  const stLabel= st==='bad'?'<span style="color:var(--bad);font-weight:700">基準外</span>':st==='warn'?'<span style="color:#b56b00;font-weight:700">境界域</span>':st==='ok'?'<span style="color:var(--ok);font-weight:700">基準内</span>':'';
+  const big = it.numeric && it.points.filter(p=>p.num!=null).length>=2 ? sparkline(it,520,150,true) : '';
+  let expHtml='';
+  if(ex){
+    expHtml=`<div class="exp"><div class="el">💡 これは何？<span style="font-weight:400;color:var(--sub);font-size:10px">(AI一般解説)</span></div>
+      <div class="row">${ex.d}</div>`;
+    if(ex.hi) expHtml+=`<div class="row"><span class="k">↑ 高いと：</span>${ex.hi}</div>`;
+    if(ex.lo) expHtml+=`<div class="row"><span class="k">↓ 低いと：</span>${ex.lo}</div>`;
+    if(ex.std) expHtml+=`<div class="row"><span class="k">目安：</span>${ex.std}</div>`;
+    expHtml+=`</div>`;
+  }
+  // 履歴表
+  let rows='';
+  [...it.points].reverse().forEach(p=>{
+    const fs= p.flag? flagStatus(p.flag):null;
+    const scol= p.num!=null? (statusOf(it,p.num)) : fs;
+    const c= scol==='bad'?'color:var(--bad)':scol==='warn'?'color:#b56b00':'';
+    const fl= p.flag?`<span class="fg" style="${c};background:#f4f6f8">${esc(String(p.flag))}</span>`:'';
+    rows+=`<tr><td>${fmtDate(p.date)}<div class="rd" style="font-size:10px;color:var(--sub)">${p.age?p.age+'歳':''}</div></td><td class="v" style="${c}">${esc(String(p.value))} <span style="font-weight:600;color:var(--sub);font-size:10px">${it.unit||''}</span>${fl}</td></tr>`;
+  });
+  const refTxt= it.ref? refText(it.ref,it.unit):'（基準範囲の設定なし）';
+  const sheet=document.getElementById('sheet');
+  sheet.innerHTML=`<div class="sheet-grab"></div>
+    <div class="sheet-h">
+      <span class="sh-cat">${it.category}</span>
+      <div class="sh-name">${it.item}</div>
+      <div class="sh-latest">最新 <b style="font-size:16px">${it.latest?it.latest.value:'-'}</b> ${it.unit||''} ${stLabel} ・ 基準 ${refTxt}</div>
+    </div>
+    <div class="sheet-body">
+      ${big}
+      ${expHtml}
+      <div class="sec-h" style="margin:6px 4px 2px">🗓 履歴 (${it.points.length}回)</div>
+      <table class="htable"><thead><tr><th>健診日</th><th style="text-align:right">値</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="disc">⚠️ 解説・基準はAIによる一般的なもので、診断や医療助言ではありません。判断は必ず医師にご相談ください。基準範囲は健診機関・測定法により異なります。</div>
+    </div>`;
+  const ov=document.getElementById('ov');
+  ov.classList.add('show');
+  sheet.scrollTop=0;
+}
+document.getElementById('ov').addEventListener('click',e=>{ if(e.target.id==='ov') closeSheet(); });
+function closeSheet(){ document.getElementById('ov').classList.remove('show'); }
+
+/* ===== helpers ===== */
+function refText(ref,unit){
+  const [lo,hi]=ref; const u=unit||'';
+  if(lo<=0 && hi<900) return `〜${hi}${u}`;
+  if(hi>=900) return `${lo}${u}〜`;
+  return `${lo}〜${hi}${u}`;
+}
+function fmtDate(s){ if(!s)return''; const[y,m,d]=s.split('-'); return `${y}.${+m}.${+d}`; }
+function fmtDiff(d){ if(d==null)return''; const a=Math.abs(d); const s= a>=100?a.toFixed(0):a>=10?a.toFixed(0):a.toFixed(1); return (d>0?'+':d<0?'−':'±')+s; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ===== load ===== */
+async function load(manual){
+  const cached=localStorage.getItem(STORAGE_KEY);
+  if(cached){ try{ render(JSON.parse(cached)); }catch(e){} }
+  const pat=sync.getPat();
+  if(!pat){ if(manual) alert('⚙️でPATを設定してください'); if(!cached) document.getElementById('msg').innerHTML='⚙️ を押して GitHub PAT を設定してください<br><span style="font-size:11px">(cc_garmin リポジトリの Contents 読み取り権限)</span>'; return; }
+  try{
+    const url=`https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
+    const res=await fetch(url,{cache:'no-store',headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
+    if(!res.ok){ if(manual) alert('取得失敗 ('+res.status+')'); return; }
+    const j=await res.json();
+    const data=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    render(data);
+    if(manual){ const b=document.getElementById('reloadBtn'); b.textContent='✓'; setTimeout(()=>b.textContent='🔄',1000); }
+  }catch(e){ console.warn('load failed',e); if(manual) alert('エラー: '+e.message); }
+}
+document.getElementById('reloadBtn').onclick=()=>load(true);
+load();
+</script>
