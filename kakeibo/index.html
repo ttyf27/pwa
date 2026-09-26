@@ -422,14 +422,14 @@ function setView(name) {
   window.scrollTo(0, 0);
 }
 
-// ========= 週末レストラン (直近3ヶ月・土日・食費≥¥2,000・新しい順) =========
+// ========= 週末レストラン (直近6ヶ月・土日・食費≥¥3,000・新しい順) =========
 // 週末外食リストから名前で除外する店 (高額でもレストラン扱いしないコンビニ等)
 const WEEKEND_EXCLUDE = new Set(['セブンイレブン']);
 // 三連休の祝日など、平日だが週末外食として扱いたい日 (YYYY-MM-DD)
 const WEEKEND_EXTRA = new Set(['2026-07-20','2026-07-31']); // 海の日(月)・三連休 / 7-31(金)どんく
 function renderWeekend() {
   const TH = 3000; // レストラン目安(コンビニ/カフェ/軽食を除外)
-  const cut = new Date(); cut.setMonth(cut.getMonth() - 3);
+  const cut = new Date(); cut.setMonth(cut.getMonth() - 6);
   const cutStr = `${cut.getFullYear()}-${String(cut.getMonth()+1).padStart(2,'0')}-${String(cut.getDate()).padStart(2,'0')}`;
   const wkn = ['日','月','火','水','木','金','土'];
   const rows = (state.entries || []).filter(e => {
@@ -444,7 +444,7 @@ function renderWeekend() {
   }).sort((a,b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
 
   const body = document.getElementById('weekendBody');
-  let html = `<div style="background:#fff;margin:10px;padding:10px 14px;border-radius:12px;font-size:12px;color:#6e6e73;">直近3ヶ月の土日・食費 ¥${TH.toLocaleString()}以上(レストラン目安)を新しい順に。件数: ${rows.length}</div>`;
+  let html = `<div style="background:#fff;margin:10px;padding:10px 14px;border-radius:12px;font-size:12px;color:#6e6e73;">直近6ヶ月の土日・食費 ¥${TH.toLocaleString()}以上(レストラン目安)を新しい順に。件数: ${rows.length}</div>`;
   if (!rows.length) {
     body.innerHTML = html + '<div style="text-align:center;color:#999;padding:30px;">該当する記録がありません</div>';
     return;
