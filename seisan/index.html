@@ -200,7 +200,13 @@ function sorted() {
 }
 function delta(e) { return (KINDS[e.kind] ? KINDS[e.kind].sign : 1) * (e.amount || 0); }
 function balance() { return data.entries.reduce((s, e) => s + delta(e), 0); }
-const yen = n => '¥' + Math.round(Math.abs(n)).toLocaleString();
+// 1万円以上は「3.7万」、それ未満は「¥3,360」。末尾 .0 は落とす (5万 / 5.2万)
+function yen(n) {
+  const v = Math.round(Math.abs(n));
+  if (v < 10000) return '¥' + v.toLocaleString();
+  const man = (v / 10000).toFixed(1).replace(/\.0$/, '');
+  return man + '万';
+}
 
 // ----- 描画 -----
 function render() {
