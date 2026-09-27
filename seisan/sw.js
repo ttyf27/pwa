@@ -1,4 +1,4 @@
-const CACHE = 'seisan-v1';
+const CACHE = 'seisan-v2';
 const ASSETS = ['./', './index.html', './manifest.json', './sync.js'];
 
 self.addEventListener('install', e => {
