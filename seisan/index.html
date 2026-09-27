@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#5B8DEF">
+<link rel="manifest" href="./manifest.json">
+<title>🧾 まゆさん精算</title>
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+body {
+  margin: 0; padding: 0 0 100px;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", sans-serif;
+  background: #f5f5f7; color: #1d1d1f; min-height: 100vh;
+}
+
+.header {
+  position: sticky; top: 0; background: #fff;
+  border-bottom: 1px solid #e5e5e7;
+  padding: 12px 16px 10px; padding-top: max(12px, env(safe-area-inset-top));
+  z-index: 100;
+}
+.header-row { display: flex; align-items: center; gap: 8px; }
+.title { flex: 1; font-size: 18px; font-weight: 700; }
+.icon-btn { background: none; border: none; padding: 6px; font-size: 14px; cursor: pointer; border-radius: 8px; color: #6e6e73; font-family: inherit; }
+.icon-btn:active { background: #f0f0f0; }
+
+/* 残高カード */
+.balance {
+  margin: 14px; padding: 22px 18px; border-radius: 16px;
+  background: #fff; text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.balance-label { font-size: 13px; color: #6e6e73; margin-bottom: 8px; }
+.balance-amount { font-size: 38px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1; }
+.balance-dir { font-size: 14px; font-weight: 600; margin-top: 10px; }
+.bal-pay { color: #E8590C; }
+.bal-recv { color: #2B8A3E; }
+.bal-zero { color: #6e6e73; }
+.balance-sub { font-size: 11px; color: #999; margin-top: 10px; line-height: 1.6; }
+
+/* 今月サマリー */
+.summary { margin: 0 14px 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sum-card { background: #fff; border-radius: 12px; padding: 12px 8px; text-align: center; }
+.sum-label { font-size: 10px; color: #6e6e73; margin-bottom: 5px; }
+.sum-val { font-size: 15px; font-weight: 700; }
+
+/* 履歴 */
+.section-title { font-size: 12px; color: #6e6e73; font-weight: 600; padding: 6px 20px; }
+.list { background: #fff; margin: 0 14px; border-radius: 14px; overflow: hidden; }
+.row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #f2f2f4; }
+.row:last-child { border-bottom: none; }
+.row-emoji { font-size: 19px; width: 26px; text-align: center; flex-shrink: 0; }
+.row-main { flex: 1; min-width: 0; }
+.row-top { font-size: 14px; font-weight: 600; }
+.row-sub { font-size: 11px; color: #999; margin-top: 2px; }
+.row-amt { text-align: right; flex-shrink: 0; }
+.row-delta { font-size: 15px; font-weight: 700; }
+.row-bal { font-size: 10px; color: #999; margin-top: 2px; }
+.plus { color: #E8590C; }
+.minus { color: #2B8A3E; }
+.empty { text-align: center; color: #999; padding: 34px 20px; font-size: 13px; line-height: 1.7; }
+
+/* 月ヘッダ */
+.month-head { padding: 14px 20px 6px; font-size: 12px; color: #6e6e73; font-weight: 600; }
+
+/* 下部ボタン */
+.actions {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.96); backdrop-filter: saturate(180%) blur(16px);
+  border-top: 1px solid #e5e5e7;
+  padding: 10px 12px; padding-bottom: max(10px, env(safe-area-inset-bottom));
+  display: flex; gap: 8px; z-index: 100;
+}
+.act-btn {
+  flex: 1; padding: 13px 6px; border: none; border-radius: 12px;
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  min-height: 48px; line-height: 1.3;
+}
+.act-meal { background: #FFF0E6; color: #E8590C; }
+.act-monthly { background: #E7F5FF; color: #1971C2; }
+.act-repay { background: #EBFBEE; color: #2B8A3E; }
+.act-btn:active { opacity: 0.6; }
+
+/* モーダル */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: flex-end; justify-content: center; z-index: 9998; }
+.overlay.show { display: flex; }
+.sheet { background: #fff; width: 100%; max-width: 480px; border-radius: 18px 18px 0 0; padding: 20px 18px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+.sheet h3 { margin: 0 0 16px; font-size: 17px; text-align: center; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 12px; color: #6e6e73; margin-bottom: 5px; }
+.field input, .field select {
+  width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 10px;
+  font-size: 16px; font-family: inherit; -webkit-appearance: none; background: #fff; color: #1d1d1f;
+}
+.sheet-actions { display: flex; gap: 8px; margin-top: 16px; }
+.sheet-actions button { flex: 1; padding: 13px; border: none; border-radius: 11px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; min-height: 46px; }
+.btn-cancel { background: #f0f0f0; color: #1d1d1f; }
+.btn-ok { background: #5B8DEF; color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <div class="title">🧾 まゆさん精算</div>
+    <span id="syncStatus" style="font-size:11px;"></span>
+    <button class="icon-btn" onclick="sync.openSettings()">⚙️</button>
+  </div>
+</div>
+
+<div class="balance">
+  <div class="balance-label">現在の貸し借り</div>
+  <div class="balance-amount" id="balAmt">¥0</div>
+  <div class="balance-dir" id="balDir">—</div>
+  <div class="balance-sub" id="balSub"></div>
+</div>
+
+<div class="summary">
+  <div class="sum-card"><div class="sum-label">今月 ご飯</div><div class="sum-val plus" id="sumMeal">¥0</div></div>
+  <div class="sum-card"><div class="sum-label">今月 返済</div><div class="sum-val minus" id="sumRepay">¥0</div></div>
+  <div class="sum-card"><div class="sum-label">5万イベント</div><div class="sum-val" id="sumMonthly">—</div></div>
+</div>
+
+<div class="section-title">履歴 (長押しで削除)</div>
+<div id="historyArea"></div>
+
+<div class="actions">
+  <button class="act-btn act-meal"    onclick="openEntry('meal')">🍽️<br>週末ご飯</button>
+  <button class="act-btn act-monthly" onclick="openEntry('monthly')">💴<br>5万イベント</button>
+  <button class="act-btn act-repay"   onclick="openEntry('repay')">💸<br>返済</button>
+</div>
+
+<div class="overlay" id="entryOverlay">
+  <div class="sheet">
+    <h3 id="entryTitle">記録</h3>
+    <div class="field">
+      <label>日付</label>
+      <input type="date" id="fDate">
+    </div>
+    <div class="field">
+      <label>金額 (円)</label>
+      <input type="number" id="fAmount" inputmode="numeric" placeholder="0">
+    </div>
+    <div class="field">
+      <label>メモ (店名など・任意)</label>
+      <input type="text" id="fNote" placeholder="">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-cancel" onclick="closeEntry()">キャンセル</button>
+      <button class="btn-ok" onclick="saveEntry()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="./sync.js"></script>
+<script>
+// ========= 精算モデル =========
+// balance = ぽっち🌟さんが まゆさんに返すべき金額 (正: 返す / 負: もらう)
+//   meal    (まゆさん立替の週末ご飯) → +amount
+//   monthly (お母さんへの5万をぽっちが払い、まゆさんと相殺)  → -amount (既定 50000)
+//   repay   (ぽっち→まゆさん の返済)  → -amount
+const KINDS = {
+  meal:    { emoji: '🍽️', label: '週末ご飯 (まゆさん立替)', sign: +1, cls: 'plus'  },
+  monthly: { emoji: '💴', label: '5万イベント (相殺)',       sign: -1, cls: 'minus' },
+  repay:   { emoji: '💸', label: '返済',                     sign: -1, cls: 'minus' },
+};
+const MONTHLY_DEFAULT = 50000;
+const STORE_KEY = 'seisan_data';
+const ME = '🐶ぽっち';
+
+let data = loadData();
+let editKind = null;
+
+function loadData() {
+  try {
+    const j = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (j && Array.isArray(j.entries)) return j;
+  } catch (e) {}
+  return { entries: [] };
+}
+function saveData(d) { localStorage.setItem(STORE_KEY, JSON.stringify(d)); }
+
+const sync = new GitHubSync({
+  appName: 'seisan',
+  repoOwner: 'ttyf27',
+  repoName: 'mylife',
+  filePath: 'data/pwa/seisan.json',
+  getData: () => data,
+});
+sync.attachStatusElement(document.getElementById('syncStatus'));
+
+// ----- 計算 -----
+function sorted() {
+  // 古い順 (残高の積み上げ用)
+  return data.entries.slice().sort((a, b) =>
+    a.date < b.date ? -1 : (a.date > b.date ? 1 : (a.id < b.id ? -1 : 1)));
+}
+function delta(e) { return (KINDS[e.kind] ? KINDS[e.kind].sign : 1) * (e.amount || 0); }
+function balance() { return data.entries.reduce((s, e) => s + delta(e), 0); }
+const yen = n => '¥' + Math.round(Math.abs(n)).toLocaleString();
+
+// ----- 描画 -----
+function render() {
+  const bal = balance();
+  document.getElementById('balAmt').textContent = yen(bal);
+  const dirEl = document.getElementById('balDir');
+  const amtEl = document.getElementById('balAmt');
+  amtEl.className = 'balance-amount ' + (bal > 0 ? 'bal-pay' : bal < 0 ? 'bal-recv' : 'bal-zero');
+  dirEl.className = 'balance-dir ' + (bal > 0 ? 'bal-pay' : bal < 0 ? 'bal-recv' : 'bal-zero');
+  if (bal > 0)      dirEl.textContent = '🐶 ぽっち → 🌟 まゆさん に返す';
+  else if (bal < 0) dirEl.textContent = '🌟 まゆさん → 🐶 ぽっち がもらう';
+  else              dirEl.textContent = '貸し借りなし';
+
+  // 内訳
+  const tot = k => data.entries.filter(e => e.kind === k).reduce((s, e) => s + (e.amount || 0), 0);
+  document.getElementById('balSub').innerHTML =
+    `通算 ご飯 ${yen(tot('meal'))} − 5万イベント ${yen(tot('monthly'))} − 返済 ${yen(tot('repay'))}`;
+
+  // 今月
+  const ym = new Date().toISOString().slice(0, 7);
+  const inMonth = k => data.entries.filter(e => e.kind === k && (e.date || '').slice(0, 7) === ym);
+  const sumOf = k => inMonth(k).reduce((s, e) => s + (e.amount || 0), 0);
+  document.getElementById('sumMeal').textContent = yen(sumOf('meal'));
+  document.getElementById('sumRepay').textContent = yen(sumOf('repay'));
+  const mEl = document.getElementById('sumMonthly');
+  const mCount = inMonth('monthly').length;
+  mEl.textContent = mCount ? '✅ 済' : '未';
+  mEl.className = 'sum-val ' + (mCount ? 'minus' : '');
+  mEl.style.color = mCount ? '' : '#999';
+
+  // 履歴 (新しい順、残高は古い順に積んでから引く)
+  const asc = sorted();
+  let run = 0;
+  const withBal = asc.map(e => { run += delta(e); return { e, bal: run }; });
+  const desc = withBal.slice().reverse();
+
+  const area = document.getElementById('historyArea');
+  if (!desc.length) {
+    area.innerHTML = '<div class="list"><div class="empty">まだ記録がありません。<br>下のボタンから追加してください。</div></div>';
+    return;
+  }
+  let html = '', curMonth = '';
+  let buf = '';
+  const flush = () => { if (buf) { html += `<div class="list">${buf}</div>`; buf = ''; } };
+  for (const { e, bal } of desc) {
+    const m = (e.date || '').slice(0, 7);
+    if (m !== curMonth) {
+      flush();
+      curMonth = m;
+      html += `<div class="month-head">${m.replace('-', '年')}月</div>`;
+    }
+    const k = KINDS[e.kind] || { emoji: '•', label: e.kind, sign: 1, cls: '' };
+    const d = delta(e);
+    const sign = d >= 0 ? '+' : '−';
+    const noteHtml = e.note ? ' · ' + String(e.note).replace(/</g, '&lt;') : '';
+    buf += `<div class="row" data-id="${e.id}">
+      <div class="row-emoji">${k.emoji}</div>
+      <div class="row-main">
+        <div class="row-top">${k.label}</div>
+        <div class="row-sub">${e.date}${noteHtml}</div>
+      </div>
+      <div class="row-amt">
+        <div class="row-delta ${k.cls}">${sign}${yen(d)}</div>
+        <div class="row-bal">残 ${bal >= 0 ? '' : '−'}${yen(bal)}</div>
+      </div>
+    </div>`;
+  }
+  flush();
+  area.innerHTML = html;
+  attachLongPress();
+}
+
+// 長押し削除
+function attachLongPress() {
+  document.querySelectorAll('.row[data-id]').forEach(el => {
+    let timer = null;
+    const start = () => {
+      timer = setTimeout(() => {
+        const id = el.dataset.id;
+        const e = data.entries.find(x => x.id === id);
+        if (!e) return;
+        const k = KINDS[e.kind] || {};
+        if (confirm(`削除しますか?\n\n${e.date} ${k.label || e.kind} ${yen(e.amount)}`)) {
+          data.entries = data.entries.filter(x => x.id !== id);
+          saveData(data); sync.markDirtyAndPush(); render();
+        }
+      }, 600);
+    };
+    const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchend', cancel);
+    el.addEventListener('touchmove', cancel);
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mouseup', cancel);
+    el.addEventListener('mouseleave', cancel);
+  });
+}
+
+// ----- 入力 -----
+function openEntry(kind) {
+  editKind = kind;
+  const k = KINDS[kind];
+  document.getElementById('entryTitle').textContent = k.emoji + ' ' + k.label;
+  const now = new Date();
+  const ymd = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  document.getElementById('fDate').value = ymd;
+  document.getElementById('fAmount').value = (kind === 'monthly') ? MONTHLY_DEFAULT : '';
+  document.getElementById('fNote').value = '';
+  document.getElementById('entryOverlay').classList.add('show');
+  if (kind !== 'monthly') setTimeout(() => document.getElementById('fAmount').focus(), 120);
+}
+function closeEntry() { document.getElementById('entryOverlay').classList.remove('show'); }
+
+function saveEntry() {
+  const date = document.getElementById('fDate').value;
+  const amount = Math.round(Number(document.getElementById('fAmount').value));
+  const note = document.getElementById('fNote').value.trim();
+  if (!date) { alert('日付を入れてください'); return; }
+  if (!amount || amount <= 0) { alert('金額を入れてください'); return; }
+  data.entries.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    kind: editKind, date, amount, note,
+    by: ME,                      // 後で共用にする時のために誰が入れたかを残す
+    ts: new Date().toISOString(),
+  });
+  saveData(data); sync.markDirtyAndPush(); closeEntry(); render();
+}
+
+document.getElementById('entryOverlay').addEventListener('click', e => {
+  if (e.target.id === 'entryOverlay') closeEntry();
+});
+
+// ----- 起動時に repo から読み戻す (server-wins) -----
+// 🚨 これが無いと空 localStorage + PAT で repo を空データで上書きしてしまう
+async function initialFetch() {
+  const pat = sync.getPat();
+  if (!pat) return;
+  try {
+    const url = `https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' }
+    });
+    if (!res.ok) return;
+    const j = await res.json();
+    const decoded = decodeURIComponent(escape(atob(j.content.replace(/\n/g, ''))));
+    const remote = JSON.parse(decoded);
+    if (remote && Array.isArray(remote.entries)) {
+      data = remote;
+      saveData(data);
+      const m = sync.getMeta();
+      m.sha = j.sha; m.lastSync = Date.now(); m.dirty = false;
+      sync.setMeta(m);
+      sync.updateStatus();
+      render();
+    }
+  } catch (e) {
+    console.warn('initial fetch failed:', e);
+  }
+}
+
+render();
+initialFetch();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW reg failed:', e));
+}
+</script>
+</body>
+</html>
