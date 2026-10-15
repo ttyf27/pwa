@@ -1,0 +1,11 @@
+{
+  "name": "dashboard",
+  "short_name": "dashboard",
+  "description": "ぽっち🌟さん統合ダッシュボード",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#673AB7",
+  "orientation": "portrait"
+}

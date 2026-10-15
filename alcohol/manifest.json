@@ -1,0 +1,11 @@
+{
+  "name": "alcohol",
+  "short_name": "alcohol",
+  "description": "ぽっち🌟さんの飲酒記録カレンダー",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#FF9800",
+  "orientation": "portrait"
+}

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PFC">
+<meta name="theme-color" content="#2E7D32">
+<link rel="manifest" href="manifest.json">
+<title>nutrition</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action: manipulation; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif; background:#f5f5f7; color:#1d1d1f; padding-bottom:90px; min-height:100vh; }
+.header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:#fff; border-bottom:1px solid #d2d2d7; position:sticky; top:0; z-index:10; padding-top:max(14px,env(safe-area-inset-top)); }
+.header-title { font-size:18px; font-weight:700; }
+.sync-btn { font-size:12px; background:#f0f0f0; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; min-height:36px; }
+.datebar { display:flex; align-items:center; justify-content:space-between; background:#fff; padding:10px 16px; border-bottom:1px solid #f0f0f0; }
+.nav-btn { padding:8px 14px; background:#f0f0f0; border:none; border-radius:8px; font-size:16px; cursor:pointer; min-width:44px; min-height:44px; }
+.datebar .d { font-size:16px; font-weight:700; flex:1; text-align:center; }
+.datebar .d small { display:block; font-size:11px; color:#999; font-weight:400; }
+.card { background:#fff; margin:8px; padding:14px 16px; border-radius:12px; border:1px solid #e5e5ea; }
+.kcal-big { font-size:30px; font-weight:800; }
+.kcal-big small { font-size:13px; color:#6e6e73; font-weight:500; }
+.bar-row { margin-top:12px; }
+.bar-row .lab { display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; }
+.bar-row .lab b { font-weight:700; }
+.bar-bg { height:9px; background:#ececed; border-radius:5px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:5px; transition:width .25s; }
+.items { margin:8px; }
+.item { display:flex; align-items:center; background:#fff; border:1px solid #e5e5ea; border-radius:10px; padding:10px 12px; margin-bottom:6px; gap:10px; }
+.item .info { flex:1; min-width:0; }
+.item .nm { font-size:14px; font-weight:600; }
+.item .mac { font-size:11px; color:#6e6e73; margin-top:2px; }
+.item .qty { display:flex; align-items:center; gap:6px; }
+.qbtn { width:30px; height:30px; border-radius:50%; border:1px solid #d2d2d7; background:#fff; font-size:17px; font-weight:700; cursor:pointer; line-height:1; }
+.qn { min-width:20px; text-align:center; font-weight:700; font-size:14px; }
+.empty { text-align:center; color:#999; font-size:13px; padding:24px; }
+.fab { position:fixed; right:18px; bottom:calc(20px + env(safe-area-inset-bottom)); width:56px; height:56px; border-radius:50%; background:#2E7D32; color:#fff; font-size:30px; border:none; box-shadow:0 4px 12px rgba(0,0,0,.25); cursor:pointer; z-index:20; }
+/* modal */
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:flex-end; justify-content:center; z-index:100; }
+.overlay.open { display:flex; }
+.sheet { background:#fff; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; border-radius:16px 16px 0 0; padding:16px; padding-bottom:calc(20px+env(safe-area-inset-bottom)); }
+.sheet h3 { font-size:16px; font-weight:700; margin-bottom:10px; }
+.seg { display:flex; gap:6px; margin-bottom:12px; }
+.seg button { flex:1; padding:9px; border:1px solid #e5e5ea; border-radius:8px; background:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+.seg button.on { background:#2E7D32; color:#fff; border-color:#2E7D32; }
+.preset-row { display:flex; align-items:center; gap:8px; padding:10px 8px; border-bottom:1px solid #f0f0f0; }
+.preset-row .info { flex:1; min-width:0; }
+.preset-row .nm { font-size:14px; font-weight:600; }
+.preset-row .mac { font-size:11px; color:#6e6e73; }
+.preset-row .add { background:#2E7D32; color:#fff; border:none; border-radius:8px; padding:8px 12px; font-weight:700; cursor:pointer; }
+.preset-row .del { background:none; border:none; color:#FF6B6B; font-size:18px; cursor:pointer; }
+.field { margin-bottom:10px; }
+.field label { display:block; font-size:12px; color:#6e6e73; margin-bottom:4px; }
+.field input { width:100%; padding:10px; border:1px solid #d2d2d7; border-radius:8px; font-size:15px; box-sizing:border-box; -webkit-appearance:none; }
+.grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.btn-primary { width:100%; padding:13px; background:#2E7D32; color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; margin-top:6px; }
+.chk { display:flex; align-items:center; gap:8px; font-size:13px; color:#6e6e73; margin:8px 0; }
+.note { font-size:11px; color:#999; line-height:1.5; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-title">🥗 PFC / カロリー</div>
+  <div style="display:flex;gap:6px">
+    <button class="sync-btn" id="refreshBtn" onclick="initialFetch(true)" title="最新を取得">🔄</button>
+    <button class="sync-btn" id="syncStatusBtn">⚙️</button>
+  </div>
+</div>
+
+<div style="display:flex;gap:6px;padding:8px 12px;background:#fff;border-bottom:1px solid #f0f0f0;">
+  <button id="tabDay" onclick="setMainTab('day')" style="flex:1;padding:9px;border:1px solid #e5e5ea;border-radius:8px;background:#2E7D32;color:#fff;font-size:13px;font-weight:600;">📝 記録</button>
+  <button id="tabHist" onclick="setMainTab('hist')" style="flex:1;padding:9px;border:1px solid #e5e5ea;border-radius:8px;background:#fff;color:#1d1d1f;font-size:13px;font-weight:600;">📋 日別一覧</button>
+</div>
+
+<div id="dayView">
+<div class="datebar">
+  <button class="nav-btn" onclick="navDay(-1)">‹</button>
+  <div class="d" id="dateLabel" onclick="goToday()">-</div>
+  <button class="nav-btn" onclick="navDay(1)">›</button>
+</div>
+
+<div class="card" id="summary"></div>
+<div class="items" id="itemList"></div>
+</div>
+
+<div id="histView" style="display:none"></div>
+
+<button class="fab" id="fab" onclick="openAdd()">＋</button>
+
+<!-- 追加モーダル -->
+<div class="overlay" id="addOverlay" onclick="if(event.target===this)closeAdd()">
+  <div class="sheet">
+    <h3>食べたものを追加</h3>
+    <div class="seg">
+      <button id="segPreset" class="on" onclick="setTab('preset')">📋 よく食べる</button>
+      <button id="segManual" onclick="setTab('manual')">✏️ 手入力(外食)</button>
+    </div>
+
+    <div id="tabPreset">
+      <div id="presetList"></div>
+      <div class="note">コンビニ/スーパーの商品は栄養成分ラベルの写真をぽっち🌟さんがチャットに貼る → 私が数値を起こして、ここに「よく食べる」として登録します。</div>
+    </div>
+
+    <div id="tabManual" style="display:none;">
+      <div class="field"><label>名前</label><input id="f_name" type="text" placeholder="例: 炭火焼鳥丼" autocomplete="off"></div>
+      <div class="grid4">
+        <div class="field"><label>kcal</label><input id="f_kcal" type="number" inputmode="numeric" placeholder="0"></div>
+        <div class="field"><label>P (g)</label><input id="f_p" type="number" inputmode="decimal" placeholder="0"></div>
+        <div class="field"><label>F (g)</label><input id="f_f" type="number" inputmode="decimal" placeholder="0"></div>
+        <div class="field"><label>C (g)</label><input id="f_c" type="number" inputmode="decimal" placeholder="0"></div>
+      </div>
+      <div class="field"><label>数量</label><input id="f_qty" type="number" inputmode="decimal" value="1" step="0.5"></div>
+      <label class="chk"><input type="checkbox" id="f_savePreset"> 「よく食べる」に登録する</label>
+      <button class="btn-primary" onclick="addManual()">この日に追加</button>
+      <div class="note">kcalを空欄にすると P×4 + F×9 + C×4 で自動計算します。</div>
+    </div>
+  </div>
+</div>
+
+<script src="sync.js"></script>
+<script>
+const STORAGE_KEY = 'nutrition_data';
+// kcal2700 = 厚労省 推定エネルギー必要量 (30-49歳男性・身体活動ふつう)。普通の1日の物差し
+const TARGET = { kcal:2600, cut:2480, p:120, f:40, fRed:60, c:210 }; // kcal2600=普通の1日(目標), cut2480=2ヶ月で-1kgの減量ライン(維持-120)
+
+const SEED_PRESETS = [
+  { id:'seed_egg',     name:'卵 (M 1個)',          kcal:76,  p:6.2,  f:5.2,  c:0.2 },
+  { id:'seed_natto',   name:'納豆 (1パック45g)',   kcal:90,  p:8.3,  f:4.5,  c:5.4 },
+  { id:'seed_pro',     name:'プロテイン (1杯)',    kcal:120, p:24,   f:1.5,  c:3 },
+  { id:'seed_onsen',   name:'温泉たまご (1個)',     kcal:62,  p:5.8,  f:4.1,  c:0.6 },
+  { id:'seed_miso',    name:'味噌汁 (1食25.8g)',   kcal:57,  p:2.4,  f:2.4,  c:6.8 },
+  { id:'seed_butashabu',name:'豚しゃぶサラダ (1包装)',kcal:186, p:19.7, f:9.5,  c:6.3 },
+  { id:'seed_yakitori',name:'炭火焼鳥丼 (1包装)',  kcal:628, p:46.4, f:15.3, c:77.8 },
+];
+
+let state = loadState();
+let curDate = new Date();
+let addTab = 'preset';
+
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (s && typeof s === 'object') {
+      if (!s.days) s.days = {};
+      if (!s.presets) s.presets = [];
+      return s;
+    }
+  } catch(e) {}
+  return { days:{}, presets: SEED_PRESETS.slice() };
+}
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  sync.markDirtyAndPush();
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function ymd(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function num(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
+
+const sync = new GitHubSync({
+  appName:'nutrition',
+  repoOwner:'ttyf27', repoName:'mylife',
+  filePath:'data/pwa/nutrition.json',
+  branch:'claude/garmin-data-analysis-V2xrD',
+  getData: () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"days":{},"presets":[]}'),
+});
+
+// ===== 集計・描画 =====
+function dayItems(){ return state.days[ymd(curDate)] || []; }
+function totalsFor(key){
+  let t={kcal:0,p:0,f:0,c:0};
+  for(const it of (state.days[key]||[])){
+    const q=it.qty||1;
+    t.kcal+=(it.kcal||0)*q; t.p+=(it.p||0)*q; t.f+=(it.f||0)*q; t.c+=(it.c||0)*q;
+  }
+  return t;
+}
+function dayTotals(){ return totalsFor(ymd(curDate)); }
+function r1(x){ return Math.round(x*10)/10; }
+
+// ===== 代謝力スコア (GOOD ENERGY / Casey Means 準拠) =====
+// 5本柱: 血糖を上げない(精製糖質回避) / 食物繊維・未加工 / オメガ3・脱揚げ物 / タンパク質 / 脱アルコール
+const MS = {
+  ALC:/ハイボール|ワイン|ビール|サワー|焼酎|日本酒|チューハイ|ウイスキー|梅酒|酒/,
+  OMEGA3:/さば|サバ|鯖|いわし|鰯|さんま|秋刀魚|鮭|サーモン|まぐろ|マグロ|ぶり|ブリ|あじ|アジ|納豆|卵|たまご|玉子|アボカド|ナッツ|くるみ|アーモンド|えごま|亜麻|チア/,
+  FRIED:/揚げ|から揚げ|唐揚げ|フライ|とんかつ|トンカツ|カツ|天ぷら|コロッケ|ポテト|フライド/,
+  REFINED:/ラーメン|うどん|そば|パスタ|丼|ごはん|ご飯|白米|パン|麺|チャーハン|焼きそば|ピザ|菓子|スイーツ|ケーキ|ドーナツ|アイス|餅/,
+  WHOLE:/サラダ|野菜|わかめ|ワカメ|海藻|もずく|めかぶ|きのこ|キャベツ|ブロッコリー|ほうれん|豆|ひじき|オクラ|トマト|レタス|納豆|きゅうり|大根|おろし|キムチ|味噌/,
+};
+function clampN(x,lo,hi){ lo=lo===undefined?0:lo; hi=hi===undefined?1:hi; return Math.max(lo,Math.min(hi,x)); }
+function metabScore(items){
+  let P=0,C=0,K=0,alc=0,refC=0,nO=0,nFr=0,nW=0;
+  for(const it of (items||[])){
+    const q=it.qty||1, nm=it.name||'';
+    P+=(it.p||0)*q; C+=(it.c||0)*q; K+=(it.kcal||0)*q;
+    const a=MS.ALC.test(nm);
+    if(a) alc+=(it.kcal||0)*q;
+    if(MS.REFINED.test(nm)&&!a) refC+=(it.c||0)*q;
+    if(MS.OMEGA3.test(nm)) nO++;
+    if(MS.FRIED.test(nm)) nFr++;
+    if(MS.WHOLE.test(nm)) nW++;
+  }
+  if(K<=0) return null;
+  const refShare=C>0?refC/C:0;
+  const g=3*clampN(1-refShare)*clampN(0.6+0.4*clampN(P/120));      // 血糖 0-3
+  const w=2*clampN(nW/3);                                           // 繊維/未加工 0-2
+  const ft=clampN(clampN(nO/2)*2-clampN(nFr/2)*2,0,2);             // オメガ3/脂質 0-2
+  const pr=2*clampN(P/120);                                         // タンパク質 0-2
+  const al=clampN(1-(alc/K)/0.20);                                 // 非アルコール 0-1
+  return {total:g+w+ft+pr+al,g,w,ft,pr,al,refShare,alcShare:alc/K};
+}
+function scoreColor(t){ return t>=8?'#2E7D32':(t>=6?'#FFA726':'#FF6B6B'); }
+function scoreBlock(items){
+  const s=metabScore(items); if(!s) return '';
+  const col=scoreColor(s.total);
+  const pill=(lab,val,max)=>`<div style="flex:1;text-align:center">`+
+    `<div style="font-size:9px;color:#999">${lab}</div>`+
+    `<div style="font-size:13px;font-weight:700">${r1(val)}<span style="font-size:8px;color:#bbb">/${max}</span></div>`+
+    `<div class="bar-bg" style="height:4px;margin-top:2px"><div class="bar-fill" style="width:${clampN(val/max)*100}%;background:${col}"></div></div></div>`;
+  return `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #eee">`+
+    `<div style="display:flex;justify-content:space-between;align-items:baseline">`+
+      `<span style="font-weight:700;font-size:13px">🔋 代謝力スコア <span style="font-size:9px;color:#999;font-weight:400">GOOD ENERGY</span></span>`+
+      `<span style="font-size:22px;font-weight:800;color:${col}">${r1(s.total)}<span style="font-size:12px;color:#999">/10</span></span></div>`+
+    `<div style="display:flex;gap:6px;margin-top:6px">`+
+      pill('血糖',s.g,3)+pill('繊維',s.w,2)+pill('Ω3脂質',s.ft,2)+pill('P',s.pr,2)+pill('脱酒',s.al,1)+`</div>`+
+    `<div style="font-size:9px;color:#999;margin-top:6px">精製糖質を上げない・繊維/未加工・オメガ3/脱揚げ物・タンパク質・脱アルコール。精製C ${Math.round(s.refShare*100)}% ・ 酒 ${Math.round(s.alcShare*100)}%</div>`+
+  `</div>`;
+}
+
+// ===== メインタブ (記録 / 日別一覧) =====
+function setMainTab(t){
+  const day = t==='day';
+  document.getElementById('dayView').style.display = day?'block':'none';
+  document.getElementById('histView').style.display = day?'none':'block';
+  document.getElementById('fab').style.display = day?'flex':'none';
+  const td=document.getElementById('tabDay'), th=document.getElementById('tabHist');
+  td.style.background=day?'#2E7D32':'#fff'; td.style.color=day?'#fff':'#1d1d1f';
+  th.style.background=day?'#fff':'#2E7D32'; th.style.color=day?'#1d1d1f':'#fff';
+  if(!day) renderHist();
+}
+// 記録のある日を新しい順に。タップでその日の記録へジャンプ
+function renderHist(){
+  const days=Object.keys(state.days).filter(d=>(state.days[d]||[]).length>0).sort().reverse();
+  let html=`<div class="card"><div style="font-weight:700;font-size:15px;margin-bottom:6px">📋 日別一覧</div>`;
+  if(!days.length){ document.getElementById('histView').innerHTML=html+'<div style="color:#999;text-align:center;padding:20px">まだ記録がありません</div></div>'; return; }
+  const wkn=['日','月','火','水','木','金','土'];
+  for(const d of days){
+    const t=totalsFor(d);
+    const [y,m,da]=d.split('-').map(Number); const wk=wkn[new Date(y,m-1,da).getDay()];
+    const kc = t.kcal>TARGET.kcal?'#FF6B6B':(t.kcal>TARGET.cut?'#FFA726':'#2E7D32');
+    const pc = t.p>=TARGET.p?'#2E7D32':'#6e6e73';
+    const fc = t.f>TARGET.fRed?'#FF6B6B':(t.f>TARGET.f?'#FFA726':'#6e6e73');
+    const ms=metabScore(state.days[d]||[]);
+    const msBadge = ms?`<span style="font-size:13px;font-weight:800;color:${scoreColor(ms.total)}">🔋${r1(ms.total)}</span><span style="font-size:9px;color:#bbb">/10</span>`:'';
+    html+=`<div onclick="jumpToDay('${d}')" style="padding:10px 0;border-top:1px solid #f0f0f0;cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <span style="font-weight:600;white-space:nowrap">${m}/${da}（${wk}） ${msBadge}</span>
+        <span style="text-align:right;white-space:nowrap">
+          <b style="color:${pc};font-size:15px">P ${r1(t.p)}</b><span style="font-size:10px;color:#999">/${TARGET.p}</span>
+          <span style="color:#ccc"> · </span><span style="color:${fc};font-size:13px">F ${r1(t.f)}</span>
+          <span style="color:#ccc"> · </span><span style="color:#6e6e73;font-size:13px">C ${r1(t.c)}</span>
+          <span style="color:#ccc"> · </span><b style="color:${kc};font-size:15px">${Math.round(t.kcal)}</b><span style="font-size:10px;color:#999">kcal</span>
+        </span>
+      </div>
+    </div>`;
+  }
+  html+=`<div style="font-size:10px;color:#999;margin-top:8px">タップでその日の記録へ。P目標${TARGET.p}達成=緑 / 脂質${TARGET.f}超=黄・${TARGET.fRed}超=赤。</div></div>`;
+  document.getElementById('histView').innerHTML=html;
+}
+function jumpToDay(d){ const [y,m,da]=d.split('-').map(Number); curDate=new Date(y,m-1,da); setMainTab('day'); render(); }
+
+function render(){
+  const wk=['日','月','火','水','木','金','土'][curDate.getDay()];
+  const isToday = ymd(curDate)===ymd(new Date());
+  document.getElementById('dateLabel').innerHTML =
+    `${curDate.getFullYear()}/${curDate.getMonth()+1}/${curDate.getDate()} (${wk})` +
+    `<small>${isToday?'今日':'タップで今日へ'}</small>`;
+
+  const t=dayTotals();
+  // ceil=true: tgt=黄ライン(目安), redT=赤ライン。バーは赤ライン基準で充填
+  const bar=(label,val,tgt,unit,ceil,redT)=>{
+    const denom = ceil ? (redT||tgt) : tgt;
+    const pct=Math.min(100, denom? val/denom*100 : 0);
+    let col;
+    if(ceil){ col = val>redT ? '#FF6B6B' : (val>tgt ? '#FFA726' : '#66BB6A'); }
+    else { col = val>=tgt ? '#2E7D32' : '#66BB6A'; }
+    return `<div class="bar-row"><div class="lab"><span>${label}</span><span><b>${r1(val)}</b> / ${tgt}${unit}</span></div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
+  };
+  const kpct=Math.min(100, t.kcal/TARGET.kcal*100);
+  const cutpct=TARGET.cut/TARGET.kcal*100;
+  const kcol = t.kcal>TARGET.kcal ? '#FF6B6B' : (t.kcal>TARGET.cut ? '#FFA726' : '#66BB6A');
+  document.getElementById('summary').innerHTML =
+    `<div class="kcal-big">${Math.round(t.kcal)} <small>/ ${TARGET.kcal} kcal (普通の1日)</small></div>`+
+    `<div style="position:relative;margin-top:8px">`+
+      `<div class="bar-bg" style="height:13px"><div class="bar-fill" style="width:${kpct}%;background:${kcol}"></div></div>`+
+      `<div style="position:absolute;top:-3px;height:19px;left:${cutpct}%;width:2px;background:#C62828"></div>`+
+    `</div>`+
+    `<div style="font-size:10px;color:#6e6e73;margin-top:3px">🔻 ${TARGET.cut}kcal=減量ライン(2ヶ月で-1kg) ／ 満タン=普通 ${TARGET.kcal}</div>`+
+    bar('🥩 タンパク質 P', t.p, TARGET.p, 'g', false)+
+    bar('🍚 炭水化物 C', t.c, TARGET.c, 'g', false)+
+    bar('🧈 脂質 F (40超黄/60超赤)', t.f, TARGET.f, 'g', true, TARGET.fRed)+
+    scoreBlock(dayItems());
+
+  const items=dayItems();
+  const el=document.getElementById('itemList');
+  if(items.length===0){ el.innerHTML='<div class="empty">まだ記録がありません。右下の＋から追加</div>'; return; }
+  el.innerHTML=items.map(it=>{
+    const q=it.qty||1;
+    return `<div class="item">
+      <div class="info">
+        <div class="nm">${escapeHtml(it.name)}</div>
+        <div class="mac">${Math.round((it.kcal||0)*q)}kcal ・ P${r1((it.p||0)*q)} F${r1((it.f||0)*q)} C${r1((it.c||0)*q)}</div>
+      </div>
+      <div class="qty">
+        <button class="qbtn" onclick="adjustQty('${it.id}',-0.5)">−</button>
+        <span class="qn">${q}</span>
+        <button class="qbtn" onclick="adjustQty('${it.id}',0.5)">＋</button>
+      </div>
+      <button class="del qbtn" style="border:none;color:#FF6B6B" onclick="delItem('${it.id}')">🗑</button>
+    </div>`;
+  }).join('');
+}
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function navDay(delta){ curDate.setDate(curDate.getDate()+delta); render(); }
+function goToday(){ curDate=new Date(); render(); }
+
+// ===== 追加 =====
+function openAdd(){ setTab('preset'); renderPresets(); document.getElementById('addOverlay').classList.add('open'); }
+function closeAdd(){ document.getElementById('addOverlay').classList.remove('open'); }
+function setTab(t){
+  addTab=t;
+  document.getElementById('segPreset').classList.toggle('on',t==='preset');
+  document.getElementById('segManual').classList.toggle('on',t==='manual');
+  document.getElementById('tabPreset').style.display = t==='preset'?'block':'none';
+  document.getElementById('tabManual').style.display = t==='manual'?'block':'none';
+}
+function renderPresets(){
+  const el=document.getElementById('presetList');
+  if(!state.presets.length){ el.innerHTML='<div class="empty">プリセット未登録。手入力タブで「登録」するか、ラベル写真から追加します。</div>'; return; }
+  el.innerHTML=state.presets.map(p=>`<div class="preset-row">
+    <div class="info"><div class="nm">${escapeHtml(p.name)}</div>
+      <div class="mac">${p.kcal||0}kcal ・ P${r1(p.p||0)} F${r1(p.f||0)} C${r1(p.c||0)}</div></div>
+    <button class="add" onclick="addFromPreset('${p.id}')">追加</button>
+    <button class="del" onclick="delPreset('${p.id}')">−</button>
+  </div>`).join('');
+}
+function addFromPreset(pid){
+  const p=state.presets.find(x=>x.id===pid); if(!p) return;
+  const key=ymd(curDate); state.days[key]=state.days[key]||[];
+  state.days[key].push({ id:uid(), name:p.name, kcal:p.kcal||0, p:p.p||0, f:p.f||0, c:p.c||0, qty:1 });
+  saveState(); render(); closeAdd();
+}
+function addManual(){
+  const name=document.getElementById('f_name').value.trim();
+  if(!name){ alert('名前を入れてください'); return; }
+  let kcal=num(document.getElementById('f_kcal').value);
+  const p=num(document.getElementById('f_p').value), f=num(document.getElementById('f_f').value), c=num(document.getElementById('f_c').value);
+  if(!kcal) kcal=Math.round(p*4+f*9+c*4); // 空欄なら自動計算
+  const qty=num(document.getElementById('f_qty').value)||1;
+  const key=ymd(curDate); state.days[key]=state.days[key]||[];
+  state.days[key].push({ id:uid(), name, kcal, p, f, c, qty });
+  if(document.getElementById('f_savePreset').checked){
+    state.presets.push({ id:uid(), name, kcal, p, f, c });
+  }
+  // フォームクリア
+  ['f_name','f_kcal','f_p','f_f','f_c'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_qty').value='1'; document.getElementById('f_savePreset').checked=false;
+  saveState(); render(); closeAdd();
+}
+function adjustQty(id,delta){
+  const items=dayItems(); const it=items.find(x=>x.id===id); if(!it) return;
+  it.qty=Math.max(0,(it.qty||1)+delta);
+  if(it.qty===0){ state.days[ymd(curDate)]=items.filter(x=>x.id!==id); }
+  saveState(); render();
+}
+function delItem(id){
+  const key=ymd(curDate);
+  state.days[key]=(state.days[key]||[]).filter(x=>x.id!==id);
+  saveState(); render();
+}
+function delPreset(pid){
+  if(!confirm('このプリセットを削除しますか?(記録済みの履歴は残ります)')) return;
+  state.presets=state.presets.filter(x=>x.id!==pid);
+  saveState(); renderPresets();
+}
+
+// ===== 起動 =====
+sync.attachStatusElement(document.getElementById('syncStatusBtn'));
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+render();
+
+// 起動時 & 🔄 で repo から読み戻す。上書きではなくマージ:
+//  presets = サーバ∪ローカル (新規プリセットを取り込みつつローカルの自作も保持)
+//  days    = サーバ∪ローカル (同日はローカル優先=未同期の当日編集を守る / 空localで空pushする事故も防ぐ)
+async function initialFetch(manual){
+  const pat=sync.getPat();
+  if(!pat){ if(manual) alert('先に⚙️でPAT(GitHubトークン)を設定してください'); return; }
+  try{
+    const url=`https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
+    const res=await fetch(url,{cache:'no-store',headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
+    if(!res.ok){ if(manual) alert('取得に失敗しました ('+res.status+')'); return; }
+    const j=await res.json();
+    const remote=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+    const hasData = remote && ((remote.days && Object.keys(remote.days).length>0) || (remote.presets && remote.presets.length>0));
+    if(hasData){
+      const local = loadState();
+      const map={};
+      // 名前キーで統合(同名は重複させない。サーバ版を優先)
+      for(const p of (remote.presets||[])) map[p.name]=p;
+      for(const p of (local.presets||[])){ if(!(p.name in map)) map[p.name]=p; }
+      // 日別: 同じ日は「品目を合算(idで統合)」して両端末の追加を残す
+      const days = {};
+      const rd = remote.days || {}, ld = local.days || {};
+      for (const d of new Set([...Object.keys(rd), ...Object.keys(ld)])) {
+        const byId = {};
+        for (const it of (rd[d] || [])) byId[it.id] = it;
+        for (const it of (ld[d] || [])) byId[it.id] = it; // 同一idはローカル優先(数量編集を反映)
+        days[d] = Object.values(byId);
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ days, presets:Object.values(map) }));
+      state=loadState();
+      const m=sync.getMeta(); m.sha=j.sha; m.lastSync=Date.now(); m.dirty=false; sync.setMeta(m); sync.updateStatus();
+      render();
+      if(manual) flashRefresh();
+    } else if(manual){ alert('サーバにデータがありません'); }
+  }catch(e){ console.warn('initialFetch failed',e); if(manual) alert('更新に失敗: '+e.message); }
+}
+function flashRefresh(){ const b=document.getElementById('refreshBtn'); if(!b) return; b.textContent='✓'; setTimeout(()=>{ b.textContent='🔄'; },1200); }
+initialFetch();
+</script>
+</body>
+</html>

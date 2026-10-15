@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="calendar">
+<meta name="theme-color" content="#4285F4">
+<link rel="manifest" href="manifest.json">
+<title>calendar</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action: manipulation; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif; background:#fff; color:#1d1d1f; height:100vh; display:flex; flex-direction:column; -webkit-text-size-adjust:100%; overflow:hidden; }
+button { font-family:inherit; }
+
+/* ===== ヘッダ ===== */
+.top { display:flex; align-items:center; gap:8px; padding:10px 12px; padding-top:max(10px,env(safe-area-inset-top)); border-bottom:1px solid #e5e5ea; background:#fff; }
+/* Safariのタブ内(非standalone)では上バーが畳まれ、DynamicIsland/ステータスバーとメニューが重なるので余白を確保 */
+body.browser-mode .top { padding-top:max(env(safe-area-inset-top), 46px); }
+.top .title { font-size:17px; font-weight:700; }
+.top .range { font-size:13px; color:#6e6e73; flex:1; }
+.seg { display:flex; background:#f0f0f0; border-radius:8px; overflow:hidden; }
+.seg button { padding:6px 12px; font-size:13px; border:none; background:transparent; color:#6e6e73; cursor:pointer; font-weight:600; }
+.seg button.on { background:#fff; color:#4285F4; box-shadow:0 1px 2px rgba(0,0,0,.15); border-radius:7px; }
+.navbtns { display:flex; align-items:center; gap:4px; }
+.navbtns button { width:32px; height:32px; border:none; background:#f0f0f0; border-radius:8px; font-size:15px; cursor:pointer; color:#1d1d1f; }
+.navbtns .today { width:auto; padding:0 10px; font-size:12px; font-weight:600; }
+.sync { border:none; background:transparent; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap; padding:4px 2px; flex-shrink:0; }
+
+/* ===== 曜日ヘッダ ===== */
+.dayhead { display:flex; border-bottom:1px solid #e5e5ea; background:#fff; }
+.dayhead .gutter { width:46px; flex-shrink:0; }
+.dayhead .dh { flex:1; text-align:center; padding:6px 2px 8px; border-left:1px solid #f0f0f0; }
+.dayhead .dh .wd { font-size:11px; color:#6e6e73; }
+.dayhead .dh .dnum { font-size:18px; font-weight:600; margin-top:2px; width:32px; height:32px; line-height:32px; border-radius:50%; display:inline-block; }
+.dayhead .dh.today .wd { color:#4285F4; }
+.dayhead .dh.today .dnum { background:#4285F4; color:#fff; }
+.dayhead .dh.sun .wd, .dayhead .dh.sun .dnum { color:#EA4335; }
+.dayhead .dh.sat .wd, .dayhead .dh.sat .dnum { color:#4285F4; }
+.dayhead .dh.today.sun .dnum, .dayhead .dh.today.sat .dnum { color:#fff; }
+
+/* ===== 時間グリッド ===== */
+.scroll { flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
+.grid { display:flex; position:relative; }
+.gutter { width:46px; flex-shrink:0; position:relative; }
+.gutter .hr { height:48px; position:relative; }
+.gutter .hr span { position:absolute; top:-7px; right:6px; font-size:10px; color:#9a9a9f; }
+.cols { flex:1; display:flex; position:relative; }
+.col { flex:1; position:relative; border-left:1px solid #f0f0f0; }
+.col .cell { height:48px; border-top:1px solid #f0f0f0; }
+.col .cell:first-child { border-top:none; }
+.evlayer { position:absolute; inset:0; pointer-events:none; }
+.ev { position:absolute; border-radius:5px; padding:2px 5px; font-size:11px; line-height:1.25; color:#fff; overflow:hidden; pointer-events:auto; cursor:pointer; box-shadow:0 0 0 1px rgba(255,255,255,.6); }
+.ev .et { font-weight:600; overflow:hidden; word-break:break-word; }
+.ev .es { font-size:10px; opacity:.9; }
+.ev.prov { background:rgba(66,133,244,.55) !important; box-shadow:0 0 0 1px #4285F4; z-index:6; }
+.nowline { position:absolute; left:0; right:0; height:2px; background:#EA4335; z-index:5; pointer-events:none; }
+.nowline::before { content:''; position:absolute; left:-4px; top:-3px; width:8px; height:8px; border-radius:50%; background:#EA4335; }
+
+/* ===== モーダル ===== */
+.ov { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:100; padding:18px; }
+.ov.open { display:flex; }
+.sheet { background:#fff; border-radius:16px; width:100%; max-width:400px; max-height:90vh; overflow-y:auto; padding:18px; }
+.sheet h3 { font-size:16px; font-weight:700; text-align:center; margin-bottom:14px; }
+.fld { margin-bottom:12px; }
+.fld label { display:block; font-size:12px; color:#6e6e73; margin-bottom:4px; }
+.fld input, .fld textarea, .fld select { width:100%; border:1px solid #d2d2d7; border-radius:8px; font-size:15px; font-family:inherit; padding:9px 10px; outline:none; background:#fff; color:#1d1d1f; }
+.fld input:disabled { background:#f2f2f5; color:#aaa; }
+.fld textarea { resize:vertical; min-height:56px; }
+.trow { display:flex; gap:10px; }
+.trow .fld { flex:1; }
+.swatches { display:flex; gap:10px; flex-wrap:wrap; }
+.sw { width:30px; height:30px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
+.sw.on { border-color:#1d1d1f; }
+.acts { display:flex; gap:10px; margin-top:6px; }
+.acts button { flex:1; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; }
+.btn-save { background:#4285F4; color:#fff; }
+.btn-del { background:#fff; color:#EA4335; border:1px solid #f0d0cd !important; }
+.btn-cancel { background:#f0f0f0; color:#1d1d1f; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="title">📅</div>
+  <div class="range" id="range">—</div>
+  <div class="seg">
+    <button id="segWeek" class="on" onclick="setView('week')">週</button>
+    <button id="seg3" onclick="setView('3day')">3日</button>
+  </div>
+  <div class="navbtns">
+    <button onclick="nav(-1)">‹</button>
+    <button class="today" onclick="goToday()">今日</button>
+    <button onclick="nav(1)">›</button>
+  </div>
+  <button class="sync" id="syncStatus">☁️</button>
+</div>
+
+<div class="dayhead" id="dayhead"></div>
+
+<div class="scroll" id="scroll">
+  <div class="grid">
+    <div class="gutter" id="gutter"></div>
+    <div class="cols" id="cols"></div>
+  </div>
+</div>
+
+<!-- 予定 追加/編集 -->
+<div class="ov" id="ov">
+  <div class="sheet">
+    <h3 id="mTitle">予定</h3>
+    <div class="fld"><label>タイトル</label><input id="m_title" type="text" placeholder="予定名" autocomplete="off"></div>
+    <div class="fld"><label>日付</label><input id="m_date" type="date"></div>
+    <div class="trow">
+      <div class="fld"><label>開始</label><input id="m_start" type="time" step="300"></div>
+      <div class="fld"><label>終了</label><input id="m_end" type="time" step="300"></div>
+    </div>
+    <div class="fld"><label>繰り返し</label>
+      <select id="m_recur" onchange="onRecurChange()">
+        <option value="none">なし</option>
+        <option value="daily">毎日</option>
+        <option value="weekly">毎週</option>
+        <option value="monthly">毎月</option>
+        <option value="yearly">毎年</option>
+        <option value="custom">カスタム…</option>
+      </select>
+    </div>
+    <div id="m_custom" style="display:none">
+      <div class="trow" style="align-items:flex-end">
+        <div class="fld" style="flex:0 0 84px"><label>間隔</label><input id="m_interval" type="number" min="1" value="1"></div>
+        <div class="fld"><label>単位</label>
+          <select id="m_unit">
+            <option value="daily">日ごと</option>
+            <option value="weekly">週ごと</option>
+            <option value="monthly">月ごと</option>
+            <option value="yearly">年ごと</option>
+          </select>
+        </div>
+      </div>
+      <div class="trow" style="align-items:flex-end">
+        <div class="fld"><label>終了</label>
+          <select id="m_endmode" onchange="onEndModeChange()">
+            <option value="never">終了しない</option>
+            <option value="until">日付で終了</option>
+          </select>
+        </div>
+        <div class="fld"><label>終了日</label><input id="m_until" type="date" disabled></div>
+      </div>
+      <div class="note" id="m_recurnote" style="font-size:11px;color:#8e8e93"></div>
+    </div>
+    <div class="fld"><label>色</label><div class="swatches" id="m_sw"></div></div>
+    <div class="fld"><label>メモ</label><textarea id="m_note" placeholder="任意"></textarea></div>
+    <div class="acts">
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-del" id="m_del" onclick="delEvent()" style="display:none">削除</button>
+      <button class="btn-save" onclick="saveEvent()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="sync.js"></script>
+<script>
+const STORAGE_KEY = 'calendar_data';
+const HOUR_H = 48;                 // 1時間の高さ(px)
+const SNAP = 15;                   // ドラッグ作成の刻み(分)
+const COLORS = { lavender:'#7986CB', blue:'#4285F4', red:'#EA4335', green:'#0B8043', orange:'#F4511E', purple:'#8E24AA', teal:'#00897B', gray:'#616161' };
+const DEFAULT_COLOR = 'lavender';           // 実カレンダーに合わせ既定=ラベンダー
+const WEEK_START = 6;                        // 週の始まり 0=日..6=土 (実カレンダー=土曜始まり)
+const WD = ['日','月','火','水','木','金','土'];
+
+let view = localStorage.getItem('cal_view') || 'week';
+if(view!=='week' && view!=='3day') view='week';
+let anchor = new Date(); anchor.setHours(0,0,0,0);
+let editId = null;
+
+function loadData(){
+  try{ const s=JSON.parse(localStorage.getItem(STORAGE_KEY)); if(s&&Array.isArray(s.events)) return s; }catch(e){}
+  return { events:[] };
+}
+let data = loadData();
+function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function commit(){ saveData(); render(); sync.markDirtyAndPush(); }
+function uid(){ return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+// ===== 日付ユーティリティ =====
+function ymd(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); x.setHours(0,0,0,0); return x; }
+function parseMin(t){ if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+(m||0); }
+function fmtMin(m){ const h=Math.floor(m/60), mm=m%60; return `${h}:${String(mm).padStart(2,'0')}`; }
+function sameDay(a,b){ return ymd(a)===ymd(b); }
+
+function viewDays(){
+  if(view==='3day') return [0,1,2].map(i=>addDays(anchor,i));
+  const off=(7 + anchor.getDay() - WEEK_START) % 7;
+  const start=addDays(anchor, -off);   // 週=WEEK_START始まり
+  return [0,1,2,3,4,5,6].map(i=>addDays(start,i));
+}
+
+// ===== 描画 =====
+const sync = new GitHubSync({
+  appName:'calendar', repoOwner:'ttyf27', repoName:'mylife',
+  filePath:'data/pwa/calendar.json', branch:'claude/garmin-data-analysis-V2xrD',
+  getData: () => data,
+});
+sync.attachStatusElement(document.getElementById('syncStatus'));
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+
+function setView(v){ view=v; localStorage.setItem('cal_view',v);
+  document.getElementById('segWeek').classList.toggle('on',v==='week');
+  document.getElementById('seg3').classList.toggle('on',v==='3day');
+  render();
+}
+function nav(dir){ anchor=addDays(anchor, dir*(view==='3day'?3:7)); render(); }
+function goToday(){ anchor=new Date(); anchor.setHours(0,0,0,0); render(); scrollToHour(new Date().getHours()); }
+
+function render(){
+  const days=viewDays();
+  // 期間ラベル
+  const a=days[0], b=days[days.length-1];
+  const rl = a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth()
+    ? `${a.getFullYear()}年${a.getMonth()+1}月 ${a.getDate()}–${b.getDate()}日`
+    : `${a.getFullYear()}/${a.getMonth()+1}/${a.getDate()} – ${b.getMonth()+1}/${b.getDate()}`;
+  document.getElementById('range').textContent = rl;
+
+  // 曜日ヘッダ
+  const today=new Date();
+  document.getElementById('dayhead').innerHTML =
+    '<div class="gutter"></div>' + days.map(d=>{
+      const cls=[ d.getDay()===0?'sun':'', d.getDay()===6?'sat':'', sameDay(d,today)?'today':'' ].join(' ');
+      return `<div class="dh ${cls}"><div class="wd">${WD[d.getDay()]}</div><div class="dnum">${d.getDate()}</div></div>`;
+    }).join('');
+
+  // 時間ガター
+  let g=''; for(let h=0;h<24;h++){ g+=`<div class="hr"><span>${h?h+':00':''}</span></div>`; }
+  document.getElementById('gutter').innerHTML=g;
+
+  // 各日カラム
+  document.getElementById('cols').innerHTML = days.map((d,di)=>{
+    let cells=''; for(let h=0;h<24;h++){ cells+=`<div class="cell" data-di="${di}" data-h="${h}"></div>`; }
+    return `<div class="col" data-di="${di}"><div class="evlayer" id="evl${di}"></div>${cells}</div>`;
+  }).join('');
+
+  // 予定配置
+  days.forEach((d,di)=> placeEvents(d,di));
+
+  // now-line (当日のみ)
+  const nd = days.findIndex(d=>sameDay(d,today));
+  if(nd>=0){ const nm=today.getHours()*60+today.getMinutes();
+    const line=document.createElement('div'); line.className='nowline';
+    line.style.top=(nm/60*HOUR_H)+'px';
+    document.getElementById('evl'+nd).appendChild(line);
+  }
+
+  bindCells();
+}
+
+// 繰り返し: 予定 e がその日 d に出現するか
+function parseYMD(s){ const [y,m,dd]=s.split('-').map(Number); return new Date(y,m-1,dd); }
+function occursOn(e, d){
+  const r=e.recur; if(!r || r.freq==='none') return e.date===ymd(d);
+  const start=parseYMD(e.date);
+  if(d<start) return false;
+  if(r.until){ if(d>parseYMD(r.until)) return false; }
+  const iv=Math.max(1, r.interval||1);
+  const days=Math.round((d-start)/86400000);
+  if(r.freq==='daily')  return days % iv===0;
+  if(r.freq==='weekly') return d.getDay()===start.getDay() && (days/7) % iv===0;
+  if(r.freq==='monthly'){ if(d.getDate()!==start.getDate()) return false;
+    const md=(d.getFullYear()-start.getFullYear())*12+(d.getMonth()-start.getMonth()); return md>=0 && md%iv===0; }
+  if(r.freq==='yearly'){ if(d.getDate()!==start.getDate()||d.getMonth()!==start.getMonth()) return false;
+    const yd=d.getFullYear()-start.getFullYear(); return yd>=0 && yd%iv===0; }
+  return false;
+}
+function dayOccurrences(d){ return data.events.filter(e=> occursOn(e,d)); }
+
+// 重なりレイアウト: クラスタ内で列割当 → 幅=1/列数
+function placeEvents(d, di){
+  const key=ymd(d);
+  const evs=dayOccurrences(d)
+    .map(e=>({...e, s:parseMin(e.start), e2:parseMin(e.end||e.start)}))
+    .map(e=>({...e, e2: e.e2>e.s ? e.e2 : e.s+30 }))
+    .sort((x,y)=> x.s-y.s || x.e2-y.e2);
+  // クラスタ分割
+  const layer=document.getElementById('evl'+di);
+  let cluster=[], cEnd=-1;
+  const flush=()=>{
+    const colsEnd=[];
+    cluster.forEach(it=>{ let placed=false;
+      for(let i=0;i<colsEnd.length;i++){ if(it.s>=colsEnd[i]){ it.col=i; colsEnd[i]=it.e2; placed=true; break; } }
+      if(!placed){ it.col=colsEnd.length; colsEnd.push(it.e2); }
+    });
+    const n=colsEnd.length;
+    cluster.forEach(it=> drawEv(layer,it,n));
+    cluster=[];
+  };
+  evs.forEach(it=>{ if(cluster.length && it.s>=cEnd){ flush(); cEnd=-1; } cluster.push(it); cEnd=Math.max(cEnd,it.e2); });
+  if(cluster.length) flush();
+}
+function drawEv(layer, it, ncol){
+  const top=it.s/60*HOUR_H, h=Math.max((it.e2-it.s)/60*HOUR_H, 16);
+  const w=100/ncol, left=it.col*w;
+  const c=COLORS[it.color]||COLORS[DEFAULT_COLOR];
+  const el=document.createElement('div');
+  el.className='ev'; el.style.top=top+'px'; el.style.height=(h-1)+'px';
+  el.style.left=`calc(${left}% + 1px)`; el.style.width=`calc(${w}% - 2px)`; el.style.background=c;
+  const rep=(it.recur && it.recur.freq!=='none')?'↻ ':'';
+  el.innerHTML=`<div class="et">${rep}${esc(it.title||'(無題)')}</div>`+(h>28?`<div class="es">${fmtMin(it.s)}${it.end?'–'+fmtMin(it.e2):''}</div>`:'');
+  el.onclick=(ev)=>{ ev.stopPropagation(); openEdit(it.id); };
+  layer.appendChild(el);
+}
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ドラッグで所要時間を決めて作成 (マウス/トラックパッド=即ドラッグ / タッチ=長押し→ドラッグ)。短タップ=1時間
+const scrollEl = () => document.getElementById('scroll');
+let drag = null;
+function yToMin(col, clientY){
+  const r=col.getBoundingClientRect();
+  let min=Math.round(((clientY-r.top)/HOUR_H*60)/SNAP)*SNAP;
+  return Math.max(0, Math.min(1440, min));
+}
+function freezeScroll(f){ scrollEl().style.overflowY = f ? 'hidden' : 'auto'; }
+function showProv(){
+  if(drag.prov) return;
+  const el=document.createElement('div'); el.className='ev prov';
+  document.getElementById('evl'+drag.di).appendChild(el); drag.prov=el; updateProv();
+}
+function updateProv(){
+  if(!drag.prov) return;
+  const s=Math.min(drag.startMin,drag.curMin), e=Math.max(drag.startMin,drag.curMin);
+  const top=s/60*HOUR_H, h=Math.max((e-s)/60*HOUR_H, 8);
+  drag.prov.style.top=top+'px'; drag.prov.style.height=h+'px'; drag.prov.style.left='1px'; drag.prov.style.right='1px'; drag.prov.style.width='auto';
+  drag.prov.innerHTML=`<div class="es">${fmtMin(s)}–${fmtMin(e===s?e+SNAP:e)}</div>`;
+}
+function bindCells(){
+  const days=viewDays();
+  document.querySelectorAll('.col').forEach(col=>{
+    col.addEventListener('pointerdown', e=>{
+      if(e.target.closest('.ev:not(.prov)')) return;        // 既存予定タップは編集へ
+      const di=+col.dataset.di; const m=yToMin(col,e.clientY);
+      drag={ col, di, day:days[di], startMin:m, curMin:m, ptype:e.pointerType, moved:false, active:false, y0:e.clientY, timer:null };
+      if(e.pointerType==='mouse' || e.pointerType==='pen'){
+        drag.active=true;                                    // マウスは即ドラッグ待機
+      } else {
+        drag.timer=setTimeout(()=>{ if(drag){ drag.active=true; freezeScroll(true); showProv(); } }, 260); // タッチは長押し
+      }
+    });
+  });
+}
+window.addEventListener('pointermove', e=>{
+  if(!drag) return;
+  if(drag.timer && Math.abs(e.clientY-drag.y0)>8){ clearTimeout(drag.timer); drag.timer=null; } // 長押し前に動いた=スクロール
+  if(!drag.active) return;
+  e.preventDefault();
+  drag.curMin=yToMin(drag.col, e.clientY);
+  if(Math.abs(drag.curMin-drag.startMin)>=SNAP) drag.moved=true;
+  showProv(); updateProv();
+}, {passive:false});
+function endDrag(commit){
+  if(!drag) return;
+  if(drag.timer) clearTimeout(drag.timer);
+  if(drag.prov) drag.prov.remove();
+  freezeScroll(false);
+  const d=drag; drag=null;
+  if(!commit) return;
+  if(d.moved){
+    const s=Math.min(d.startMin,d.curMin); let e=Math.max(d.startMin,d.curMin); if(e-s<SNAP) e=s+SNAP;
+    openNew(d.day, s, e);
+  } else if(d.ptype!=='touch' || !d.active){
+    openNew(d.day, d.startMin, Math.min(d.startMin+60,1440));  // 短タップ=1時間
+  } else {
+    openNew(d.day, d.startMin, Math.min(d.startMin+SNAP,1440));
+  }
+}
+window.addEventListener('pointerup', ()=> endDrag(true));
+window.addEventListener('pointercancel', ()=> endDrag(false));
+
+// ===== モーダル =====
+function renderSwatches(sel){
+  document.getElementById('m_sw').innerHTML = Object.keys(COLORS).map(k=>
+    `<div class="sw ${k===sel?'on':''}" data-c="${k}" style="background:${COLORS[k]}" onclick="pickColor('${k}')"></div>`).join('');
+}
+let curColor=DEFAULT_COLOR;
+function pickColor(k){ curColor=k; renderSwatches(k); }
+
+// ===== 繰り返し UI =====
+const RECUR_LABEL={daily:'毎日',weekly:'毎週',monthly:'毎月',yearly:'毎年'};
+const UNIT_LABEL={daily:'日',weekly:'週',monthly:'ヶ月',yearly:'年'};
+function onRecurChange(){
+  const v=document.getElementById('m_recur').value;
+  document.getElementById('m_custom').style.display = (v==='custom')?'':'none';
+  updateRecurNote();
+}
+function onEndModeChange(){
+  const until=document.getElementById('m_endmode').value==='until';
+  document.getElementById('m_until').disabled=!until;
+  updateRecurNote();
+}
+function updateRecurNote(){
+  const el=document.getElementById('m_recurnote'); if(!el) return;
+  const iv=Math.max(1,parseInt(document.getElementById('m_interval').value)||1);
+  const unit=document.getElementById('m_unit').value;
+  let s=`${iv}${UNIT_LABEL[unit]}ごとに繰り返し`;
+  if(document.getElementById('m_endmode').value==='until'){ const u=document.getElementById('m_until').value; s+= u?`（${u}まで）`:'（終了日未設定）'; }
+  else s+='（終了しない）';
+  el.textContent=s;
+}
+['m_interval','m_unit','m_until'].forEach(id=>{ document.addEventListener('input',e=>{ if(e.target.id===id) updateRecurNote(); }); });
+// モーダルへ recur を反映 / 読取
+function setRecurUI(recur){
+  const sel=document.getElementById('m_recur');
+  const cu=document.getElementById('m_custom');
+  document.getElementById('m_interval').value=1;
+  document.getElementById('m_unit').value='weekly';
+  document.getElementById('m_endmode').value='never';
+  document.getElementById('m_until').value=''; document.getElementById('m_until').disabled=true;
+  if(!recur || recur.freq==='none'){ sel.value='none'; cu.style.display='none'; return; }
+  const iv=recur.interval||1;
+  if(iv===1 && !recur.until){ sel.value=recur.freq; cu.style.display='none'; }
+  else { // カスタム表示
+    sel.value='custom'; cu.style.display='';
+    document.getElementById('m_interval').value=iv;
+    document.getElementById('m_unit').value=recur.freq;
+    if(recur.until){ document.getElementById('m_endmode').value='until'; document.getElementById('m_until').value=recur.until; document.getElementById('m_until').disabled=false; }
+  }
+  updateRecurNote();
+}
+function readRecurUI(){
+  const v=document.getElementById('m_recur').value;
+  if(v==='none') return null;
+  if(v!=='custom') return { freq:v, interval:1 };
+  const r={ freq:document.getElementById('m_unit').value, interval:Math.max(1,parseInt(document.getElementById('m_interval').value)||1) };
+  if(document.getElementById('m_endmode').value==='until'){ const u=document.getElementById('m_until').value; if(u) r.until=u; }
+  return r;
+}
+
+function hhmm(m){ m=Math.max(0,Math.min(1439,m)); return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`; }
+function openNew(d, sMin, eMin){
+  editId=null; curColor=DEFAULT_COLOR;
+  document.getElementById('mTitle').textContent='新しい予定';
+  document.getElementById('m_del').style.display='none';
+  document.getElementById('m_title').value='';
+  document.getElementById('m_date').value=ymd(d);
+  document.getElementById('m_start').value=hhmm(sMin);
+  document.getElementById('m_end').value=hhmm(eMin);
+  document.getElementById('m_note').value='';
+  setRecurUI(null);
+  renderSwatches(DEFAULT_COLOR);
+  document.getElementById('ov').classList.add('open');
+  setTimeout(()=>document.getElementById('m_title').focus(),50);
+}
+function openEdit(id){
+  const e=data.events.find(x=>x.id===id); if(!e) return;
+  editId=id; curColor=e.color||'blue';
+  document.getElementById('mTitle').textContent='予定を編集';
+  document.getElementById('m_del').style.display='';
+  document.getElementById('m_title').value=e.title||'';
+  document.getElementById('m_date').value=e.date;
+  document.getElementById('m_start').value=e.start||'09:00';
+  document.getElementById('m_end').value=e.end||'';
+  document.getElementById('m_note').value=e.note||'';
+  setRecurUI(e.recur);
+  renderSwatches(curColor);
+  document.getElementById('ov').classList.add('open');
+}
+function closeModal(){ document.getElementById('ov').classList.remove('open'); editId=null; }
+function saveEvent(){
+  const title=document.getElementById('m_title').value.trim();
+  const date=document.getElementById('m_date').value;
+  const start=document.getElementById('m_start').value;
+  let end=document.getElementById('m_end').value;
+  if(!date || !start){ alert('日付と開始時刻を入れてください'); return; }
+  if(end && parseMin(end)<=parseMin(start)) end=''; // 不正な終了は無視
+  const note=document.getElementById('m_note').value.trim();
+  const recur=readRecurUI();
+  if(editId){
+    const e=data.events.find(x=>x.id===editId);
+    if(e){ Object.assign(e,{title,date,start,end,note,color:curColor}); if(recur) e.recur=recur; else delete e.recur; }
+  } else {
+    const ev={ id:uid(), title, date, start, end, note, color:curColor };
+    if(recur) ev.recur=recur;
+    data.events.push(ev);
+  }
+  closeModal(); commit();
+}
+function delEvent(){
+  if(!editId) return;
+  const e=data.events.find(x=>x.id===editId);
+  const rep=(e&&e.recur&&e.recur.freq!=='none')?'（繰り返し予定をすべて）':'';
+  if(!confirm('この予定を削除しますか?'+rep+'\n\n'+(e&&e.title||''))) return;
+  data.events=data.events.filter(x=>x.id!==editId);
+  closeModal(); commit();
+}
+
+function scrollToHour(h){ document.getElementById('scroll').scrollTop=Math.max(0,(h-1))*HOUR_H; }
+
+// 🚨 入力アプリ必須: 起動時に repo から読み戻す (server-wins)。無いと空localStorageが上書きする
+async function initialFetch(){
+  const pat=sync.getPat(); if(!pat) return;
+  try{
+    const url=`https://api.github.com/repos/${sync.repoOwner}/${sync.repoName}/contents/${sync.filePath}?ref=${encodeURIComponent(sync.branch)}&t=${Date.now()}`;
+    const res=await fetch(url,{cache:'no-store',headers:{'Authorization':`Bearer ${pat}`,'Accept':'application/vnd.github+json'}});
+    if(!res.ok) return;
+    const j=await res.json();
+    const remote=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+    if(remote && Array.isArray(remote.events)){
+      data=remote; saveData();
+      const m=sync.getMeta(); m.sha=j.sha; m.lastSync=Date.now(); m.dirty=false; sync.setMeta(m); sync.updateStatus();
+      render();
+    }
+  }catch(e){ console.warn('initialFetch failed',e); }
+}
+
+// ===== 起動 =====
+// Safariのタブ内(非standalone)判定 → 上部余白を確保 (DynamicIsland重なり対策)
+(function(){
+  const standalone = window.navigator.standalone===true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  if(!standalone) document.body.classList.add('browser-mode');
+})();
+setView(view);
+render();
+scrollToHour(new Date().getHours());
+initialFetch();
+</script>
+</body>
+</html>
