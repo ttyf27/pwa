@@ -1,0 +1,11 @@
+{
+  "name": "津久見ギフト",
+  "short_name": "津久見",
+  "description": "Amazonで津久見(実家)宛に送ったギフト一覧",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#C75B39",
+  "orientation": "portrait"
+}
