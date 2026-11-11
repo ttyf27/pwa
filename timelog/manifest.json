@@ -1,0 +1,11 @@
+{
+  "name": "timelog",
+  "short_name": "timelog",
+  "description": "ぽっち🌟さんのカレンダー時間集計",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#5E35B1",
+  "orientation": "portrait"
+}

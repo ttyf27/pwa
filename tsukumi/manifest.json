@@ -1,0 +1,11 @@
+{
+  "name": "🎁ギフト",
+  "short_name": "ギフト",
+  "description": "Amazonで贈ったギフトの一覧",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#C75B39",
+  "orientation": "portrait"
+}

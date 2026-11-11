@@ -1,0 +1,11 @@
+{
+  "name": "Tasks",
+  "short_name": "Tasks",
+  "description": "ぽっち🌟さんのTODO",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ececed",
+  "theme_color": "#FF9500",
+  "orientation": "portrait"
+}

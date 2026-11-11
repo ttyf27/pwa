@@ -1,0 +1,11 @@
+{
+  "name": "Calendar",
+  "short_name": "Calendar",
+  "description": "ぽっち🌟さんのカレンダー (週・3日)",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4285F4",
+  "orientation": "portrait"
+}
